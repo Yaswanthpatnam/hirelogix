@@ -96,7 +96,14 @@ class ForgotPasswordAPI(APIView):
         serializer.is_valid(raise_exception=True)
 
         email = serializer.validated_data["email"]
-        user = User.objects.get(email=email)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"message": "If this email exists, a reset link has been sent"},
+                status=status.HTTP_200_OK
+            )
 
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = PasswordResetTokenGenerator().make_token(user)
@@ -114,10 +121,11 @@ This link will expire soon.
 """,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
+            fail_silently=True,
         )
 
         return Response(
-            {"message": "Password reset link sent to your email"},
+            {"message": "Password reset link sent"},
             status=status.HTTP_200_OK
         )
         
