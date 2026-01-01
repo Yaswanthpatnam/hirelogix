@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@import url("https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Climate+Crisis&family=Albert+Sans:wght@300;400;600&display=swap");
+
+:root {
+  --brand: #883bbf;
+  --brand-soft: #ac5bcd;
+  --bg: #faf9ff;
+  --card: #ffffff;
+}
+
+
+html,
+body {
+  background: var(--bg);
+  font-family: "Albert Sans", system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* LOGO */
+.font-brand {
+  font-family: "Black Han Sans", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: var(--brand);
+}
+
+/* HERO TITLE */
+.font-brand-title {
+  font-family: "Climate Crisis", sans-serif;
+  font-weight: 400;
+  line-height: 1.33; 
+  letter-spacing: 0;
+}
+
+.dashboard-card {
+  background: var(--card);
+  border-radius: 1.5rem;
+  transition: all 0.35s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 45px rgba(136, 59, 191, 0.18);
+}
+
+
+.section-hover {
+  transition: background 0.35s ease, box-shadow 0.35s ease;
+}
+
+.section-hover:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(136, 59, 191, 0.08),
+    rgba(136, 59, 191, 0.02)
+  );
+}
+
+
+.btn-primary {
+  @apply px-6 py-3 rounded-xl bg-purple-600 text-white font-medium
+         hover:bg-purple-700 transition;
+}
+
+.btn-outline {
+  @apply px-6 py-3 rounded-xl border border-gray-300
+         hover:border-purple-400 hover:text-purple-600 transition;
+}
+
+.input {
+  @apply w-full h-12 px-4 rounded-lg border border-gray-300
+         focus:outline-none focus:ring-2 focus:ring-purple-500;
+}
+
+
+.responsive-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.dashboard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .dashboard-nav h1 {
+    font-size: 1.1rem;
+  }
+
+  .dashboard-nav button {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.75rem;
+  }
+}

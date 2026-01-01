@@ -160,7 +160,7 @@ class ResetPasswordAPI(APIView):
         return Response(
             {
                 "message": "Password reset successful",
-                "identifier": user.email  # 🔥 for auto-login
+                "identifier": user.email  
             },
             status=status.HTTP_200_OK
         )     
