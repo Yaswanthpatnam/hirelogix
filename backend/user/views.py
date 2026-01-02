@@ -101,7 +101,6 @@ class ForgotPasswordAPI(APIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # security best practice
             return Response(
                 {"message": "If this email exists, a reset link has been sent"},
                 status=status.HTTP_200_OK
@@ -121,7 +120,7 @@ class ForgotPasswordAPI(APIView):
             ),
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
-            fail_silently=False,  # important for debugging
+            fail_silently=False,  # will throw error on Render
         )
 
         return Response(
