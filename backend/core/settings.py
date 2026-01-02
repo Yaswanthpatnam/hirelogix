@@ -161,6 +161,10 @@ USE_I18N = True
 USE_TZ = True
 
 
+CLOUDINARY_STORAGE = {
+    "RESOURCE_TYPE": "raw",
+}
+
 # STATIC & MEDIA
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"

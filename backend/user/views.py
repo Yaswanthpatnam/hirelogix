@@ -111,18 +111,15 @@ class ForgotPasswordAPI(APIView):
         reset_link = f"{settings.FRONTEND_RESET_URL}/{uid}/{token}"
 
         send_mail(
-            subject="Reset your HireLogix password",
-            message=f"""
+    subject="Reset your HireLogix password",
+    message=f"""
 Click the link below to reset your password:
 
 {reset_link}
-
-This link will expire soon.
 """,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=True,
-        )
+    from_email=settings.DEFAULT_FROM_EMAIL,
+    recipient_list=[email],
+)
 
         return Response(
             {"message": "Password reset link sent"},
