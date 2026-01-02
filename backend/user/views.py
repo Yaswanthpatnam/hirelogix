@@ -1,3 +1,5 @@
+import os
+import resend
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -89,6 +91,7 @@ class ProfileAPI(APIView):
             "email": request.user.email
         })
 
+resend.api_key = os.getenv("RESEND_API_KEY")
 
 class ForgotPasswordAPI(APIView):
     def post(self, request):
@@ -100,6 +103,7 @@ class ForgotPasswordAPI(APIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
+            # security best practice
             return Response(
                 {"message": "If this email exists, a reset link has been sent"},
                 status=status.HTTP_200_OK
@@ -110,16 +114,20 @@ class ForgotPasswordAPI(APIView):
 
         reset_link = f"{settings.FRONTEND_RESET_URL}/{uid}/{token}"
 
-        send_mail(
-    subject="Reset your HireLogix password",
-    message=f"""
-Click the link below to reset your password:
-
-{reset_link}
-""",
-    from_email=settings.DEFAULT_FROM_EMAIL,
-    recipient_list=[email],
-)
+        resend.Emails.send({
+            "from": "HireLogix <onboarding@resend.dev>",
+            "to": [email],
+            "subject": "Reset your HireLogix password",
+            "html": f"""
+                <p>You requested a password reset.</p>
+                <p>
+                  <a href="{reset_link}">
+                    Click here to reset your password
+                  </a>
+                </p>
+                <p>This link will expire soon.</p>
+            """
+        })
 
         return Response(
             {"message": "Password reset link sent"},
