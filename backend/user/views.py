@@ -63,7 +63,7 @@ class RegisterAPI(APIView):
 #             }
 #         })
 
-class LOGINAPI(APIView):
+class LoginAPI(APIView):
     def post(self, request):
         identifier = request.data.get("identifier")
         password = request.data.get("password")
