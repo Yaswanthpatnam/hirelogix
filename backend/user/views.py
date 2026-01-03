@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth import get_user_model
 
 from .serializers import (
     RegisterSerializer,
@@ -29,39 +30,77 @@ class RegisterAPI(APIView):
         )
 
 
-class LoginAPI(APIView):
+# class LoginAPI(APIView):
+#     def post(self, request):
+#         identifier = request.data.get("identifier")
+#         password = request.data.get("password")
+
+#         if not identifier or not password:
+#             return Response({"error": "All fields are required"}, status=400)
+
+#         if "@" in identifier:
+#             try:
+#                 user = User.objects.get(email=identifier.lower())
+#                 username = user.username
+#             except User.DoesNotExist:
+#                 return Response({"error": "Invalid credentials"}, status=400)
+#         else:
+#             username = identifier.lower()
+
+#         user = authenticate(username=username, password=password)
+#         if not user:
+#             return Response({"error": "Invalid credentials"}, status=400)
+
+#         refresh = RefreshToken.for_user(user)
+
+#         return Response({
+#             "access": str(refresh.access_token),
+#             "refresh": str(refresh),
+#             "user": {
+#                 "id": user.id,
+#                 "username": user.username,
+#                 "email": user.email
+#             }
+#         })
+
+class LOGINAPI(APIView):
     def post(self, request):
         identifier = request.data.get("identifier")
         password = request.data.get("password")
-
+        
         if not identifier or not password:
-            return Response({"error": "All fields are required"}, status=400)
-
-        if "@" in identifier:
-            try:
+            return Response(
+                {"error":"All fields are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            if "@" in identifier:
                 user = User.objects.get(email=identifier.lower())
-                username = user.username
-            except User.DoesNotExist:
-                return Response({"error": "Invalid credentials"}, status=400)
-        else:
-            username = identifier.lower()
-
-        user = authenticate(username=username, password=password)
-        if not user:
-            return Response({"error": "Invalid credentials"}, status=400)
-
+            else:
+                user = User.objects.get(username=identifier.lower())
+        except User.DoesNotExist:
+            return Response(
+                {"error":"Inavlid credentials"},
+                status = status.HTTP_400_BAD_REQUEST
+            )      
+            
+        # Direct password check (no auth backend traversal)
+        if not user.check_password(password):
+            return Response(
+                {"error":"Invalid credentials"},
+                status = status.HTTP_400_BAD_REQUEST
+            )              
         refresh = RefreshToken.for_user(user)
-
+        
         return Response({
             "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email
+            "refresh":str(refresh),
+            "user":{
+                "id":user.id,
+                "username":user.username,
+                "email":user.email
             }
         })
-        
 class LogoutAPI(APIView):
     permission_classes = [IsAuthenticated]
 
