@@ -29,17 +29,13 @@ export default function ForgotPassword() {
         onSubmit={submit}
         className="bg-white p-8 rounded-2xl shadow w-full max-w-md space-y-6"
       >
-        <h1 className="text-2xl font-semibold text-center">
-          Forgot Password
-        </h1>
+        <h1 className="text-2xl font-semibold text-center">Forgot Password</h1>
 
         {message && (
           <p className="text-green-600 text-sm text-center">{message}</p>
         )}
 
-        {error && (
-          <p className="text-red-600 text-sm text-center">{error}</p>
-        )}
+        {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
         <input
           type="email"
@@ -53,7 +49,14 @@ export default function ForgotPassword() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-12 bg-purple-600 text-white rounded hover:opacity-90 transition"
+          className="w-full h-12 bg-purple-600 text-white rounded  transition-all duration-200
+    hover:bg-[#d73782]
+    hover:scale-[1.02]
+
+    active:scale-[0.97]
+    active:bg-[#c92f75]
+
+    focus:outline-none"
         >
           {loading ? "Sending..." : "Send Reset Link"}
         </button>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/authLayout";
@@ -21,15 +20,10 @@ export default function Login() {
         password,
       });
 
-     
       localStorage.setItem(ACCESS_TOKEN, res.data.access);
       localStorage.setItem(REFRESH_TOKEN, res.data.refresh);
 
-      const displayName =
-        res.data.username ||
-        res.data.email ||
-        email;
-
+      const displayName = res.data.username || res.data.email || email;
 
       localStorage.setItem("username", displayName.split("@")[0]);
       localStorage.setItem("email", displayName);
@@ -46,9 +40,7 @@ export default function Login() {
         onSubmit={handleSubmit}
         className="space-y-6 sm:space-y-8 w-full max-w-md mx-auto px-2"
       >
-        {error && (
-          <p className="text-red-600 text-sm text-center">{error}</p>
-        )}
+        {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
         <input
           type="text"
@@ -74,7 +66,22 @@ export default function Login() {
 
         <button
           type="submit"
-          className="w-full bg-[#E84393] text-white py-3 rounded-2xl"
+          className="
+    w-full 
+    bg-[#E84393] 
+    text-white 
+    py-3 
+    rounded-2xl
+
+    transition-all duration-200
+    hover:bg-[#d73782]
+    hover:scale-[1.02]
+
+    active:scale-[0.97]
+    active:bg-[#c92f75]
+
+    focus:outline-none
+  "
         >
           Submit
         </button>

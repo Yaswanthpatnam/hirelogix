@@ -24,7 +24,6 @@ export default function ResetPassword() {
     try {
       setLoading(true);
 
-     
       const resetRes = await api.post("/user/reset-password/", {
         uid,
         token,
@@ -33,7 +32,6 @@ export default function ResetPassword() {
       });
 
       const identifier = resetRes.data.identifier; // email
-
 
       const loginRes = await api.post("/user/login/", {
         identifier,
@@ -82,7 +80,14 @@ export default function ResetPassword() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-12 bg-purple-600 text-white rounded hover:opacity-90 transition"
+          className="w-full h-12 bg-purple-600 text-white rounded  transition-all duration-200
+    hover:bg-[#d73782]
+    hover:scale-[1.02]
+
+    active:scale-[0.97]
+    active:bg-[#c92f75]
+
+    focus:outline-none"
         >
           {loading ? "Resetting..." : "Reset Password"}
         </button>

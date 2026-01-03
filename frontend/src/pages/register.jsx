@@ -60,9 +60,7 @@ export default function Register() {
         onSubmit={handleSubmit}
         className="space-y-5 sm:space-y-6 w-full max-w-md mx-auto px-2"
       >
-        {error && (
-          <p className="text-red-600 text-sm text-center">{error}</p>
-        )}
+        {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
         <input
           type="text"
@@ -104,8 +102,14 @@ export default function Register() {
               bg-[#E84393]
               text-white
               rounded-2xl
-              hover:scale-105
-              transition
+               transition-all duration-200
+    hover:bg-[#d73782]
+    hover:scale-[1.02]
+
+    active:scale-[0.97]
+    active:bg-[#c92f75]
+
+    focus:outline-none
               w-full sm:w-auto
             "
           >
