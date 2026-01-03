@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import ProtectedRoute from "./components/protectedRoute";
+import { Analytics } from "@vercel/analytics/next"
 
 
 const Home = lazy(() => import("./pages/home"));
