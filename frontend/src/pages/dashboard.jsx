@@ -22,6 +22,12 @@ export default function Dashboard() {
   const [verdictStats, setVerdictStats] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchDashboardStats = async () => {
+    const res = await api.get("/jobs/dashboard/");
+    setStageStats(res.data.by_stage || []);
+    setVerdictStats(res.data.by_verdict || []);
+  };
+
   useEffect(() => {
     const name =
       localStorage.getItem("username") ||
@@ -29,12 +35,16 @@ export default function Dashboard() {
 
     if (name) setUsername(name);
 
-    api.get("/jobs/dashboard/").then((res) => {
-      setStageStats(res.data.by_stage || []);
-      setVerdictStats(res.data.by_verdict || []);
-      setLoading(false);
-    });
+    fetchDashboardStats().finally(() => setLoading(false));
   }, []);
+
+
+  useEffect(() => {
+    const handler = () => fetchDashboardStats();
+    window.addEventListener("jobs-updated", handler);
+    return () => window.removeEventListener("jobs-updated", handler);
+  }, []);
+
   const getStageCount = (stage) =>
     stageStats.find((s) => s.stage === stage)?.count || 0;
 
@@ -47,97 +57,43 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      {/* ✅ PERSONALIZED HEADER */}
-      <section className="dashboard-card section-hover p-6 sm:p-10 mb-10">
+      <section className="dashboard-card p-6 mb-10">
         {loading ? (
-          <>
-            <Skeleton className="h-8 w-64 mb-4" />
-            <Skeleton className="h-6 w-96 mb-6" />
-          </>
+          <Skeleton className="h-8 w-64" />
         ) : (
           <>
-            <h1 className="text-2xl sm:text-3xl font-semibold mb-2">
-              Welcome back, <span className="text-purple-600">{username}</span>
+            <h1 className="text-2xl font-semibold">
+              Welcome back,{" "}
+              <span className="text-purple-600">{username}</span>
             </h1>
-
             <p className="text-gray-600">
               You currently have{" "}
-              <b className="text-black">{totalActive}</b> active applications in
-              progress.
+              <b>{totalActive}</b> active applications.
             </p>
           </>
         )}
       </section>
 
-      {/* PIPELINE */}
-      <section className="dashboard-card section-hover p-6 sm:p-8">
-        <h2 className="text-xl font-semibold mb-8">
-          Your Application Pipeline
-        </h2>
-
-        {loading ? (
-          <div className="space-y-4">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton key={i} className="h-4 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-10">
-            {/* ACTIVE STAGES */}
-            <div className="space-y-4">
-              {Object.keys(STAGE_COLORS).map((stage) => (
-                <div key={stage}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>{stage}</span>
-                    <span>{getStageCount(stage)}</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`${STAGE_COLORS[stage]} h-full`}
-                      style={{
-                        width: totalActive
-                          ? `${(getStageCount(stage) / totalActive) * 100}%`
-                          : "0%",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+      <section className="dashboard-card p-6">
+        {Object.keys(STAGE_COLORS).map((stage) => (
+          <div key={stage} className="mb-4">
+            <div className="flex justify-between text-sm">
+              <span>{stage}</span>
+              <span>{getStageCount(stage)}</span>
             </div>
-
-            {/* FINAL OUTCOMES */}
-            <div className="pt-6 border-t">
-              <h3 className="text-lg font-semibold mb-4">
-                Final Outcomes
-              </h3>
-
-              <div className="space-y-4">
-                {Object.keys(VERDICT_COLORS).map((verdict) => (
-                  <div key={verdict}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>{verdict}</span>
-                      <span>{getVerdictCount(verdict)}</span>
-                    </div>
-                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`${VERDICT_COLORS[verdict]} h-full`}
-                        style={{
-                          width:
-                            getVerdictCount(verdict) > 0
-                              ? "100%"
-                              : "0%",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="h-3 bg-gray-100 rounded-full">
+              <div
+                className={`${STAGE_COLORS[stage]} h-full`}
+                style={{
+                  width: totalActive
+                    ? `${(getStageCount(stage) / totalActive) * 100}%`
+                    : "0%",
+                }}
+              />
             </div>
           </div>
-        )}
+        ))}
       </section>
     </DashboardLayout>
   );
 }
-
-

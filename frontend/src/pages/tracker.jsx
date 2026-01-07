@@ -38,7 +38,6 @@ export default function Tracker() {
       localStorage.getItem("email")?.split("@")[0];
 
     if (name) setUsername(name);
-
     fetchJobs();
   }, []);
 
@@ -47,11 +46,16 @@ export default function Tracker() {
     setJobs(res.data.results || []);
   };
 
+ 
   const deleteJob = async (id, e) => {
     e.stopPropagation();
     if (!window.confirm("Delete this job application?")) return;
+
     await api.delete(`/jobs/${id}/`);
-    fetchJobs();
+    await fetchJobs();
+
+    // 🔥 Notify dashboard
+    window.dispatchEvent(new Event("jobs-updated"));
   };
 
   const visibleJobs = jobs.filter((job) => {
@@ -69,79 +73,25 @@ export default function Tracker() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-10">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold">
-            Let’s review your opportunities,{" "}
-            <span className="text-purple-600">{username}</span>
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Track, update, and move applications forward at your pace.
-          </p>
-        </div>
+      <div className="flex justify-between mb-10">
+        <h1 className="text-2xl font-semibold">
+          Let’s review your opportunities,{" "}
+          <span className="text-purple-600">{username}</span>
+        </h1>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary w-fit"
-        >
+        <button onClick={() => setShowModal(true)} className="btn-primary">
           + Add Job
         </button>
       </div>
 
-      <div className="flex gap-3 mb-10 flex-wrap">
-        {["ALL", "APPLIED", "SHORTLISTED", "ASSESSMENT", "INTERVIEW"].map(
-          (stage) => (
-            <button
-              key={stage}
-              onClick={() => {
-                setFilterStage(stage);
-                setFilterVerdict("");
-              }}
-              className={`px-4 py-1.5 rounded-full text-sm ${
-                filterStage === stage
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-200"
-              }`}
-            >
-              {stage}
-            </button>
-          )
-        )}
-
-        <select
-          value={filterVerdict}
-          onChange={(e) => {
-            setFilterStage("OFFER");
-            setFilterVerdict(e.target.value);
-          }}
-          className="px-4 py-2 rounded-full text-sm bg-gray-100 border"
-        >
-          <option value="">Offer outcome</option>
-          <option value="ACCEPTED">Offer accepted</option>
-          <option value="REJECTED">Offer declined</option>
-          <option value="GHOSTED">No response</option>
-        </select>
-      </div>
-
       <div className="space-y-6">
         {rows.map((row, idx) => (
-          <div
-            key={idx}
-            className={`responsive-grid ${
-              row.length === 1
-                ? "grid-cols-1"
-                : row.length === 2
-                ? "grid-cols-2"
-                : "grid-cols-3"
-            }`}
-          >
+          <div key={idx} className="grid grid-cols-3 gap-6">
             {row.map((job) => (
               <div
                 key={job.id}
                 onClick={() => navigate(`/tracker/${job.id}`)}
-                className={`relative rounded-xl cursor-pointer shadow hover:shadow-xl transition ${getCardBg(
-                  job
-                )}`}
+                className={`rounded-xl cursor-pointer shadow hover:shadow-xl transition ${getCardBg(job)}`}
               >
                 <button
                   onClick={(e) => deleteJob(job.id, e)}
@@ -150,17 +100,11 @@ export default function Tracker() {
                   Delete
                 </button>
 
-                <div className="px-6 py-6 text-white">
-                  <h3 className="font-semibold text-lg truncate">
+                <div className="p-6 text-white">
+                  <h3 className="font-semibold text-lg">
                     {job.job_title}
                   </h3>
-                  <p className="text-sm opacity-90">{job.company}</p>
-                  <p className="text-xs opacity-75 mt-1">
-                    Applied on {job.applied_date}
-                  </p>
-                  <p className="mt-4 text-xs underline opacity-90">
-                    View details →
-                  </p>
+                  <p className="text-sm">{job.company}</p>
                 </div>
               </div>
             ))}
@@ -174,6 +118,7 @@ export default function Tracker() {
           onSuccess={() => {
             setShowModal(false);
             fetchJobs();
+            window.dispatchEvent(new Event("jobs-updated")); 
           }}
         />
       )}
