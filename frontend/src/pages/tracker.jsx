@@ -42,10 +42,20 @@ export default function Tracker() {
     fetchJobs();
   }, []);
 
-  const fetchJobs = async () => {
-    const res = await api.get("/jobs/");
-    setJobs(res.data.results || []);
-  };
+const fetchJobs = async () => {
+  let allJobs = [];
+  let nextUrl = "/jobs/";
+
+  while (nextUrl) {
+    const res = await api.get(nextUrl);
+    allJobs = [...allJobs, ...(res.data.results || [])];
+    nextUrl = res.data.next
+      ? res.data.next.replace(import.meta.env.VITE_API_URL, "")
+      : null;
+  }
+
+  setJobs(allJobs);
+};
 
 const deleteJob = async (id, e) => {
   e.stopPropagation();
