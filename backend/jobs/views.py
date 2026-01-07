@@ -110,25 +110,28 @@ class JobFilterAPI(APIView):
         serializer = JobApplicationSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
     
-    
 class JobDashboardStatsAPI(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        user_jobs = JobApplication.objects.filter(user=request.user)
+
+        active_jobs = user_jobs.filter(verdict__isnull=True)
+
         return Response({
             "by_stage": list(
-                JobApplication.objects
-                .filter(user=request.user)
+                active_jobs
                 .values("stage")
                 .annotate(count=Count("id"))
             ),
             "by_verdict": list(
-                JobApplication.objects
-                .filter(user=request.user)
+                user_jobs
+                .filter(verdict__isnull=False)
                 .values("verdict")
                 .annotate(count=Count("id"))
             ),
         })
+        
         
 class JobDetailAPI(APIView):
     permission_classes = [IsAuthenticated]
