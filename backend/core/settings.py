@@ -191,9 +191,11 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "https://hirelogix.vercel.app",  
+    "http://localhost:5173/",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://hirelogix.onrender.com",
     "https://hirelogix.vercel.app",
+    "http://localhost:5173/",
 ]
