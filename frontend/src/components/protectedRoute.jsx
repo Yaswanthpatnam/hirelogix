@@ -1,26 +1,29 @@
-import { Navigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
-import { ACCESS_TOKEN } from "../constant";
+import {
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 
-export default function ProtectedRoute({ children }) {
-  const token = localStorage.getItem(ACCESS_TOKEN);
 
-  if (!token) {
-    return <Navigate to="/" replace />;
+export default function ProtectedRoute({
+  children,
+}) {
+  const location =
+    useLocation();
+
+  const accessToken =
+    localStorage.getItem("access");
+
+  if (!accessToken) {
+    return (
+      <Navigate
+        to="/"
+        replace
+        state={{
+          from: location.pathname,
+        }}
+      />
+    );
   }
 
-  try {
-    const { exp } = jwtDecode(token);
-    const now = Date.now() / 1000;
-
-    if (exp < now) {
-      localStorage.removeItem(ACCESS_TOKEN);
-      return <Navigate to="/login" replace />;
-    }
-
-    return children;
-  } catch {
-    localStorage.removeItem(ACCESS_TOKEN);
-    return <Navigate to="/login" replace />;
-  }
+  return children;
 }

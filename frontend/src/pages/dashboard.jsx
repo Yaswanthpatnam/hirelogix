@@ -1,157 +1,638 @@
-import { useEffect, useState } from "react";
-import api from "../utils/api";
-import DashboardLayout from "../components/dashboardLayout";
-import { Skeleton } from "../components/skeleton";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-const STAGE_COLORS = {
-  APPLIED: "bg-[#8b6df6]",
-  SHORTLISTED: "bg-[#7bcf9a]",
-  ASSESSMENT: "bg-[#ffb26b]",
-  INTERVIEW: "bg-[#7a8dfd]",
-};
+import "../styles/dashboard.css";
 
-const VERDICT_COLORS = {
-  ACCEPTED: "bg-green-600",
-  REJECTED: "bg-red-600",
-  GHOSTED: "bg-black",
-};
+import Sidebar from
+  "../components/dashboard/Sidebar";
+
+import Topbar from
+  "../components/dashboard/Topbar";
+
+import DashboardSkeleton from
+  "../components/dashboard/DashboardSkeleton";
+
+import DetailPanel from
+  "../components/dashboard/DetailPanel";
+
+import Overview from
+  "../components/views/Overview";
+
+import ApplicationsView from
+  "../components/views/ApplicationsView";
+
+import TimelineView from
+  "../components/views/TimelineView";
+
+import InsightsView from
+  "../components/views/InsightsView";
+
+import EmptyDashboard from
+  "../components/views/EmptyDashboard";
+
+import useDashboardData from
+  "../hooks/useDashboardData";
+
+import {
+  getStoredUser,
+} from "../utils/dashboardHelpers";
+
+
+const DASHBOARD_VIEWS = [
+  "Overview",
+  "Applications",
+  "Timeline",
+  "Insights",
+];
+
 
 export default function Dashboard() {
-  const [username, setUsername] = useState("there");
-  const [stageStats, setStageStats] = useState([]);
-  const [verdictStats, setVerdictStats] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  const name =
-    localStorage.getItem("username") ||
-    localStorage.getItem("email")?.split("@")[0];
+  const [
+    activeNav,
+    setActiveNav,
+  ] =
+    useState(
+      () => {
 
-  if (name) setUsername(name);
+        const state =
+          window.history.state;
 
-  const fetchDashboard = async () => {
-    setLoading(true);
-    const res = await api.get("/jobs/dashboard/");
-    setStageStats(res.data.by_stage || []);
-    setVerdictStats(res.data.by_verdict || []);
-    setLoading(false);
-  };
+        if (
+          state?.hirelogixDashboard &&
+          DASHBOARD_VIEWS.includes(
+            state.view
+          )
+        ) {
 
-  fetchDashboard();
+          return state.view;
 
-  const onStorage = (e) => {
-    if (e.key === "jobs_updated_at") {
-      fetchDashboard();
-    }
-  };
+        }
 
-  window.addEventListener("storage", onStorage);
-  return () => window.removeEventListener("storage", onStorage);
-}, []);
+        return "Overview";
 
-  const getStageCount = (stage) =>
-    stageStats.find((s) => s.stage === stage)?.count || 0;
+      }
+    );
 
-  const getVerdictCount = (verdict) =>
-    verdictStats.find((v) => v.verdict === verdict)?.count || 0;
 
-  const totalActive = Object.keys(STAGE_COLORS)
-    .map(getStageCount)
-    .reduce((a, b) => a + b, 0);
+  const [
+    mobileOpen,
+    setMobileOpen,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    selectedJobId,
+    setSelectedJobId,
+  ] =
+    useState(
+      null
+    );
+
+
+  const [
+    syncText,
+    setSyncText,
+  ] =
+    useState(
+      "Refresh"
+    );
+
+
+  const user =
+    getStoredUser();
+
+
+  const {
+    summary,
+    jobs,
+    loading,
+    error,
+    refresh,
+  } =
+    useDashboardData();
+
+
+  const safeJobs =
+    Array.isArray(
+      jobs
+    )
+      ? jobs
+      : [];
+
+
+  const totalApplications =
+    Number(
+      summary?.total ??
+      safeJobs.length ??
+      0
+    );
+
+
+  const hasApplications =
+    totalApplications > 0;
+
+
+  /*
+    Register the current browser history entry
+    as the Dashboard Overview.
+
+    IMPORTANT:
+
+    We use replaceState.
+
+    We DO NOT push another history entry.
+
+    Therefore:
+
+    Previous Page
+        ↓
+    Overview
+        ↓
+    Insights
+
+    Back from Insights returns to Overview.
+    Back from Overview returns to Previous Page.
+  */
+
+  useEffect(
+    () => {
+
+      const currentState =
+        window.history.state;
+
+
+      if (
+        !currentState?.hirelogixDashboard
+      ) {
+
+        window.history.replaceState(
+          {
+            ...currentState,
+
+            hirelogixDashboard:
+              true,
+
+            view:
+              "Overview",
+          },
+          "",
+          window.location.href
+        );
+
+      }
+
+
+      const handlePopState =
+        (event) => {
+
+          const state =
+            event.state;
+
+
+          /*
+            Browser Back/Forward between
+            Dashboard internal views.
+          */
+
+          if (
+            state?.hirelogixDashboard &&
+            DASHBOARD_VIEWS.includes(
+              state.view
+            )
+          ) {
+
+            setActiveNav(
+              state.view
+            );
+
+
+            setSelectedJobId(
+              null
+            );
+
+
+            setMobileOpen(
+              false
+            );
+
+
+            window.scrollTo({
+              top: 0,
+              behavior: "smooth",
+            });
+
+          }
+
+        };
+
+
+      window.addEventListener(
+        "popstate",
+        handlePopState
+      );
+
+
+      return () => {
+
+        window.removeEventListener(
+          "popstate",
+          handlePopState
+        );
+
+      };
+
+    },
+    []
+  );
+
+
+  const handleNavigation =
+    (item) => {
+
+      if (
+        !DASHBOARD_VIEWS.includes(
+          item
+        )
+      ) {
+
+        return;
+
+      }
+
+
+      if (
+        item === activeNav
+      ) {
+
+        setMobileOpen(
+          false
+        );
+
+        return;
+
+      }
+
+
+      /*
+        This creates a REAL browser
+        history entry.
+
+        Example:
+
+        Previous Page
+        → Overview
+        → Insights
+
+        Browser Back:
+
+        Insights
+        → Overview
+      */
+
+      window.history.pushState(
+        {
+          hirelogixDashboard:
+            true,
+
+          view:
+            item,
+        },
+        "",
+        window.location.href
+      );
+
+
+      setActiveNav(
+        item
+      );
+
+
+      setSelectedJobId(
+        null
+      );
+
+
+      setMobileOpen(
+        false
+      );
+
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
+    };
+
+
+  const handleSync =
+    async () => {
+
+      setSyncText(
+        "Refreshing..."
+      );
+
+
+      try {
+
+        const result =
+          await refresh();
+
+
+        setSyncText(
+          result === false
+            ? "Try again"
+            : "Refreshed"
+        );
+
+      } catch {
+
+        setSyncText(
+          "Try again"
+        );
+
+      } finally {
+
+        window.setTimeout(
+          () => {
+
+            setSyncText(
+              "Refresh"
+            );
+
+          },
+          1500
+        );
+
+      }
+
+    };
+
+
+  const navigateTo =
+    (view) =>
+      () =>
+        handleNavigation(
+          view
+        );
+
+
+  const renderContent =
+    () => {
+
+      if (
+        loading
+      ) {
+
+        return (
+          <DashboardSkeleton />
+        );
+
+      }
+
+
+      if (
+        error
+      ) {
+
+        return (
+
+          <div className="hl-dashboard-error">
+
+            <h2>
+              Unable to load dashboard
+            </h2>
+
+            <p>
+              {error}
+            </p>
+
+            <button
+              className="hl-primary-action"
+              onClick={refresh}
+            >
+              Try again
+            </button>
+
+          </div>
+
+        );
+
+      }
+
+
+      switch (
+        activeNav
+      ) {
+
+        case "Applications":
+
+          return (
+
+            <ApplicationsView
+              initialJobs={
+                safeJobs
+              }
+              onSelect={
+                setSelectedJobId
+              }
+            />
+
+          );
+
+
+        case "Timeline":
+
+          return (
+
+            <TimelineView
+              jobs={
+                safeJobs
+              }
+              onSelect={
+                setSelectedJobId
+              }
+            />
+
+          );
+
+
+        case "Insights":
+
+          return (
+
+            <InsightsView
+              summary={
+                summary
+              }
+              jobs={
+                safeJobs
+              }
+            />
+
+          );
+
+
+        case "Overview":
+
+        default:
+
+          if (
+            !hasApplications
+          ) {
+
+            return (
+
+              <EmptyDashboard
+                onApplications={
+                  navigateTo(
+                    "Applications"
+                  )
+                }
+              />
+
+            );
+
+          }
+
+
+          return (
+
+            <Overview
+              summary={
+                summary
+              }
+              jobs={
+                safeJobs
+              }
+              user={
+                user
+              }
+              onSelect={
+                setSelectedJobId
+              }
+              onApplications={
+                navigateTo(
+                  "Applications"
+                )
+              }
+              onTimeline={
+                navigateTo(
+                  "Timeline"
+                )
+              }
+              onInsights={
+                navigateTo(
+                  "Insights"
+                )
+              }
+            />
+
+          );
+
+      }
+
+    };
+
 
   return (
-    <DashboardLayout>
-      {/* ✅ PERSONALIZED HEADER */}
-      <section className="dashboard-card section-hover p-6 sm:p-10 mb-10">
-        {loading ? (
-          <>
-            <Skeleton className="h-8 w-64 mb-4" />
-            <Skeleton className="h-6 w-96 mb-6" />
-          </>
-        ) : (
-          <>
-            <h1 className="text-2xl sm:text-3xl font-semibold mb-2">
-              Welcome back, <span className="text-purple-600">{username}</span>
-            </h1>
 
-            <p className="text-gray-600">
-              You currently have{" "}
-              <b className="text-black">{totalActive}</b> active applications in
-              progress.
-            </p>
-          </>
-        )}
-      </section>
+    <div className="dashboard-shell">
 
-      {/* PIPELINE */}
-      <section className="dashboard-card section-hover p-6 sm:p-8">
-        <h2 className="text-xl font-semibold mb-8">
-          Your Application Pipeline
-        </h2>
+      <div
+        className={
+          `sidebar-wrap ${
+            mobileOpen
+              ? "open"
+              : ""
+          }`
+        }
+      >
 
-        {loading ? (
-          <div className="space-y-4">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton key={i} className="h-4 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-10">
-            {/* ACTIVE STAGES */}
-            <div className="space-y-4">
-              {Object.keys(STAGE_COLORS).map((stage) => (
-                <div key={stage}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>{stage}</span>
-                    <span>{getStageCount(stage)}</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`${STAGE_COLORS[stage]} h-full`}
-                      style={{
-                        width: totalActive
-                          ? `${(getStageCount(stage) / totalActive) * 100}%`
-                          : "0%",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+        <Sidebar
+          active={
+            activeNav
+          }
+          onNavigate={
+            handleNavigation
+          }
+          onClose={
+            () =>
+              setMobileOpen(
+                false
+              )
+          }
+          totalApplications={
+            totalApplications
+          }
+          user={
+            user
+          }
+        />
 
-            {/* FINAL OUTCOMES */}
-            <div className="pt-6 border-t">
-              <h3 className="text-lg font-semibold mb-4">
-                Final Outcomes
-              </h3>
+      </div>
 
-              <div className="space-y-4">
-                {Object.keys(VERDICT_COLORS).map((verdict) => (
-                  <div key={verdict}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>{verdict}</span>
-                      <span>{getVerdictCount(verdict)}</span>
-                    </div>
-                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`${VERDICT_COLORS[verdict]} h-full`}
-                        style={{
-                          width:
-                            getVerdictCount(verdict) > 0
-                              ? "100%"
-                              : "0%",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-    </DashboardLayout>
+
+      <div className="dashboard-main">
+
+        <Topbar
+          activeNav={
+            activeNav
+          }
+          hasApplications={
+            hasApplications
+          }
+          onMenu={
+            () =>
+              setMobileOpen(
+                true
+              )
+          }
+          onSync={
+            handleSync
+          }
+          syncText={
+            syncText
+          }
+        />
+
+        <main className="dashboard-content">
+
+          {
+            renderContent()
+          }
+
+        </main>
+
+      </div>
+
+
+      {
+        selectedJobId && (
+
+          <DetailPanel
+            jobId={
+              selectedJobId
+            }
+            onClose={
+              () =>
+                setSelectedJobId(
+                  null
+                )
+            }
+          />
+
+        )
+      }
+
+    </div>
+
   );
+
 }
-
-

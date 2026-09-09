@@ -1,204 +1,288 @@
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
-from django.core.mail import send_mail
 from django.conf import settings
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.contrib.auth import get_user_model
 
-from .serializers import (
-    RegisterSerializer,
-    ForgotPasswordSerializer,
-    ResetPasswordSerializer,
+from rest_framework import status
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated,
 )
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from rest_framework_simplejwt.tokens import (
+    RefreshToken,
+)
+
+from .google_auth import (
+    GoogleAuthService,
+    GoogleAuthenticationError,
+)
+
 from .models import User
 
-class RegisterAPI(APIView):
-    def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {"message": "User registered successfully"},
-            status=status.HTTP_201_CREATED
+from .serializers import (
+    GoogleLoginSerializer,
+)
+
+
+class GoogleLoginAPI(APIView):
+
+    permission_classes = [
+        AllowAny
+    ]
+
+    authentication_classes = []
+
+    def post(
+        self,
+        request
+    ):
+
+        serializer = GoogleLoginSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        credential = serializer.validated_data[
+            "credential"
+        ]
+
+
+        try:
+
+            google_user = (
+                GoogleAuthService
+                .verify_credential(
+                    credential,
+                    settings.GOOGLE_CLIENT_ID,
+                )
+            )
+
+        except GoogleAuthenticationError as exc:
+
+            print(
+                "GOOGLE AUTH ERROR:",
+                str(exc)
+            )
+
+            return Response(
+                {
+                    "detail": str(exc)
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+
+        email = google_user[
+            "email"
+        ]
+
+        google_id = google_user[
+            "google_id"
+        ]
+
+
+        user = User.objects.filter(
+            email=email
+        ).first()
+
+
+        is_new_user = (
+            user is None
         )
 
 
-# class LoginAPI(APIView):
-#     def post(self, request):
-#         identifier = request.data.get("identifier")
-#         password = request.data.get("password")
+        if user is None:
 
-#         if not identifier or not password:
-#             return Response({"error": "All fields are required"}, status=400)
+            user = User.objects.create_user(
 
-#         if "@" in identifier:
-#             try:
-#                 user = User.objects.get(email=identifier.lower())
-#                 username = user.username
-#             except User.DoesNotExist:
-#                 return Response({"error": "Invalid credentials"}, status=400)
-#         else:
-#             username = identifier.lower()
+                email=email,
 
-#         user = authenticate(username=username, password=password)
-#         if not user:
-#             return Response({"error": "Invalid credentials"}, status=400)
+                first_name=(
+                    google_user["first_name"]
+                ),
 
-#         refresh = RefreshToken.for_user(user)
+                last_name=(
+                    google_user["last_name"]
+                ),
 
-#         return Response({
-#             "access": str(refresh.access_token),
-#             "refresh": str(refresh),
-#             "user": {
-#                 "id": user.id,
-#                 "username": user.username,
-#                 "email": user.email
-#             }
-#         })
+                profile_picture=(
+                    google_user["profile_picture"]
+                ),
 
-class LoginAPI(APIView):
-    def post(self, request):
-        identifier = request.data.get("identifier")
-        password = request.data.get("password")
-        
-        if not identifier or not password:
-            return Response(
-                {"error":"All fields are required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        try:
-            if "@" in identifier:
-                user = User.objects.get(email=identifier.lower())
-            else:
-                user = User.objects.get(username=identifier.lower())
-        except User.DoesNotExist:
-            return Response(
-                {"error":"Inavlid credentials"},
-                status = status.HTTP_400_BAD_REQUEST
-            )      
-            
-        # Direct password check (no auth backend traversal)
-        if not user.check_password(password):
-            return Response(
-                {"error":"Invalid credentials"},
-                status = status.HTTP_400_BAD_REQUEST
-            )              
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            "access": str(refresh.access_token),
-            "refresh":str(refresh),
-            "user":{
-                "id":user.id,
-                "username":user.username,
-                "email":user.email
-            }
-        })
-class LogoutAPI(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            refresh_token = request.data.get("refresh")
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response(
-                {"message": "Logged out successfully"},
-                status=status.HTTP_205_RESET_CONTENT
-            )
-        except Exception:
-            return Response(
-                {"error": "Invalid refresh token"},
-                status=status.HTTP_400_BAD_REQUEST
+                google_id=google_id,
             )
 
-class ProfileAPI(APIView):
-    permission_classes = [IsAuthenticated]
+        else:
 
-    def get(self, request):
-        return Response({
-            "id": request.user.id,
-            "username": request.user.username,
-            "email": request.user.email
-        })
+            changed = []
 
 
-class ForgotPasswordAPI(APIView):
-    def post(self, request):
-        serializer = ForgotPasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+            if user.google_id != google_id:
 
-        email = serializer.validated_data["email"]
+                user.google_id = google_id
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response(
-                {"message": "If this email exists, a reset link has been sent"},
-                status=status.HTTP_200_OK
-            )
+                changed.append(
+                    "google_id"
+                )
 
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = PasswordResetTokenGenerator().make_token(user)
 
-        reset_link = f"{settings.FRONTEND_RESET_URL}/{uid}/{token}"
+            if (
+                not user.first_name
+                and google_user["first_name"]
+            ):
 
-        send_mail(
-            subject="Reset your HireLogix password",
-            message=(
-                "You requested a password reset.\n\n"
-                f"Click the link below:\n{reset_link}\n\n"
-                "This link will expire soon."
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,  # will throw error on Render
+                user.first_name = (
+                    google_user["first_name"]
+                )
+
+                changed.append(
+                    "first_name"
+                )
+
+
+            if (
+                not user.last_name
+                and google_user["last_name"]
+            ):
+
+                user.last_name = (
+                    google_user["last_name"]
+                )
+
+                changed.append(
+                    "last_name"
+                )
+
+
+            if (
+                not user.profile_picture
+                and google_user["profile_picture"]
+            ):
+
+                user.profile_picture = (
+                    google_user["profile_picture"]
+                )
+
+                changed.append(
+                    "profile_picture"
+                )
+
+
+            if changed:
+
+                user.save(
+                    update_fields=changed
+                )
+
+
+        refresh = RefreshToken.for_user(
+            user
         )
 
-        return Response(
-            {"message": "Password reset link sent"},
-            status=status.HTTP_200_OK
+        access_token = (
+            refresh.access_token
         )
-        
-        
-class ResetPasswordAPI(APIView):
-    def post(self, request):
-        serializer = ResetPasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
 
-        uid = serializer.validated_data["uid"]
-        token = serializer.validated_data["token"]
-        password = serializer.validated_data["password"]
-
-        try:
-            user_id = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=user_id)
-        except Exception:
-            return Response(
-                {"error": "Invalid reset link"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if not PasswordResetTokenGenerator().check_token(user, token):
-            return Response(
-                {"error": "Reset link expired or invalid"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        user.set_password(password)
-        user.save()
 
         return Response(
             {
-                "message": "Password reset successful",
-                "identifier": user.email  
-            },
-            status=status.HTTP_200_OK
-        )     
+
+                "access":
+                    str(access_token),
+
+                "refresh":
+                    str(refresh),
+
+                "is_new_user":
+                    is_new_user,
+
+                "user": {
+
+                    "id":
+                        user.id,
+
+                    "email":
+                        user.email,
+
+                    "first_name":
+                        user.first_name,
+
+                    "last_name":
+                        user.last_name,
+
+                    "profile_picture":
+                        user.profile_picture,
+                },
+            }
+        )
+
+class ProfileAPI(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def get(
+        self,
+        request
+    ):
+
+        user = request.user
+
+        return Response({
+
+            "id":
+                user.id,
+
+            "email":
+                user.email,
+
+            "first_name":
+                user.first_name,
+
+            "last_name":
+                user.last_name,
+
+            "profile_picture":
+                user.profile_picture,
+        })
+
+
+class LogoutAPI(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def post(
+        self,
+        request
+    ):
+
+        refresh_token = request.data.get(
+            "refresh"
+        )
+
+        if refresh_token:
+
+            try:
+
+                token = RefreshToken(
+                    refresh_token
+                )
+
+                token.blacklist()
+
+            except Exception:
+
+                pass
+
+
+        return Response({
+
+            "message":
+                "Logged out successfully."
+        })

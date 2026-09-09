@@ -1,19 +1,26 @@
 from django.urls import path
+
 from .views import (
-    RegisterAPI,
-    LoginAPI,
-    LogoutAPI,
+    GoogleLoginAPI,
     ProfileAPI,
-    ForgotPasswordAPI,
-    ResetPasswordAPI,
+    LogoutAPI,
 )
 
-urlpatterns = [
-    path("register/", RegisterAPI.as_view()),
-    path("login/", LoginAPI.as_view()),
-    path("logout/", LogoutAPI.as_view()),
-    path("profile/", ProfileAPI.as_view()),
 
-    path("forgot-password/", ForgotPasswordAPI.as_view()),
-    path("reset-password/", ResetPasswordAPI.as_view()),
+urlpatterns = [
+
+    path(
+        "auth/google/",
+        GoogleLoginAPI.as_view(),
+    ),
+
+    path(
+        "auth/me/",
+        ProfileAPI.as_view(),
+    ),
+
+    path(
+        "auth/logout/",
+        LogoutAPI.as_view(),
+    ),
 ]

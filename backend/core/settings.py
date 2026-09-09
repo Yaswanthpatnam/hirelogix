@@ -1,199 +1,350 @@
 import os
-from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
-import dj_database_url
 
+import dj_database_url
+from dotenv import load_dotenv
+
+
+# --------------------------------------------------
+# ENVIRONMENT
+# --------------------------------------------------
 
 load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+# --------------------------------------------------
+# BASE DIRECTORY
+# --------------------------------------------------
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+# --------------------------------------------------
+# SECURITY
+# --------------------------------------------------
+
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ["*"]
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
 
-# APPLICATION
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+# --------------------------------------------------
+# HOSTS
+# --------------------------------------------------
 
-    'rest_framework',
-    'rest_framework.authtoken',
-    'rest_framework_simplejwt.token_blacklist',
-
-    'corsheaders',
-
-    'user',
-    'jobs',
-    
-    'cloudinary',
-    'cloudinary_storage'
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv(
+        "DJANGO_ALLOWED_HOSTS",
+        "127.0.0.1,localhost"
+    ).split(",")
+    if host.strip()
 ]
+
+
+# --------------------------------------------------
+# GOOGLE
+# --------------------------------------------------
+
+GOOGLE_CLIENT_ID = os.environ["GOOGLE_CLIENT_ID"]
+
+# These are currently reserved for Gmail OAuth.
+GOOGLE_CLIENT_SECRET = os.getenv(
+    "GOOGLE_CLIENT_SECRET"
+)
+
+GOOGLE_REDIRECT_URI = os.getenv(
+    "GOOGLE_REDIRECT_URI"
+)
+GMAIL_GOOGLE_REDIRECT_URI = os.getenv(
+    "GMAIL_GOOGLE_REDIRECT_URI"
+)
+
+
+# --------------------------------------------------
+# APPLICATIONS
+# --------------------------------------------------
+
+INSTALLED_APPS = [
+
+    # Django
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    # Third-party
+    "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
+
+    # HireLogix
+    "user",
+    "gmail",
+    "jobs",
+]
+
+
+# --------------------------------------------------
+# MIDDLEWARE
+# --------------------------------------------------
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    "corsheaders.middleware.CorsMiddleware",
+
+    "django.middleware.security.SecurityMiddleware",
+
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+
+    "django.contrib.sessions.middleware.SessionMiddleware",
+
+    "django.middleware.common.CommonMiddleware",
+
+    "django.middleware.csrf.CsrfViewMiddleware",
+
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+
+    "django.contrib.messages.middleware.MessageMiddleware",
+
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'core.urls'
+
+# --------------------------------------------------
+# URL CONFIGURATION
+# --------------------------------------------------
+
+ROOT_URLCONF = "core.urls"
+
+
+# --------------------------------------------------
+# TEMPLATES
+# --------------------------------------------------
 
 TEMPLATES = [
+
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND":
+            "django.template.backends.django.DjangoTemplates",
+
+        "DIRS": [],
+
+        "APP_DIRS": True,
+
+        "OPTIONS": {
+
+            "context_processors": [
+
+                "django.template.context_processors.debug",
+
+                "django.template.context_processors.request",
+
+                "django.contrib.auth.context_processors.auth",
+
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+
+# --------------------------------------------------
+# WSGI / ASGI
+# --------------------------------------------------
+
+WSGI_APPLICATION = "core.wsgi.application"
+
+ASGI_APPLICATION = "core.asgi.application"
 
 
-# DATABASE (NEON)
+# --------------------------------------------------
+# DATABASE
+# --------------------------------------------------
+
 DATABASES = {
+
     "default": dj_database_url.config(
+
         default=os.environ["DATABASE_URL"],
+
         conn_max_age=600,
     )
 }
 
 
-# Email
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-
-EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = True
-
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
-EMAIL_TIMEOUT = 1
-
-
-# REDIS
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.getenv("REDIS_URL"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "IGNORE_EXCEPTIONS": True,
-        }
-    }
-}
-
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-SESSION_CACHE_ALIAS = "default"
-
-
-# AUTH / JWT
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
-    ],
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.UserRateThrottle",
-        "rest_framework.throttling.AnonRateThrottle",
-    ],
-    "DEFAULT_THROTTLE_RATES": {
-        "anon": "50/hour",
-        "user": "500/hour",
-    }
-}
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-}
+# --------------------------------------------------
+# CUSTOM USER
+# --------------------------------------------------
 
 AUTH_USER_MODEL = "user.User"
 
 
+# --------------------------------------------------
+# REST FRAMEWORK
+# --------------------------------------------------
 
-FRONTEND_RESET_URL = os.getenv("FRONTEND_RESET_URL")
+REST_FRAMEWORK = {
+
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+
+    # IMPORTANT:
+    # Individual protected views will explicitly use
+    # IsAuthenticated.
+    "DEFAULT_PERMISSION_CLASSES": (
+
+        "rest_framework.permissions.AllowAny",
+    ),
+
+    "DEFAULT_THROTTLE_CLASSES": (
+
+        "rest_framework.throttling.AnonRateThrottle",
+
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+
+    "DEFAULT_THROTTLE_RATES": {
+
+        "anon": "50/hour",
+
+        "user": "500/hour",
+    },
+}
 
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+# --------------------------------------------------
+# JWT
+# --------------------------------------------------
+
+SIMPLE_JWT = {
+
+    "ACCESS_TOKEN_LIFETIME":
+        timedelta(minutes=30),
+
+    "REFRESH_TOKEN_LIFETIME":
+        timedelta(days=7),
+
+    "ROTATE_REFRESH_TOKENS":
+        True,
+
+    "BLACKLIST_AFTER_ROTATION":
+        True,
+
+    "UPDATE_LAST_LOGIN":
+        False,
+
+    "AUTH_HEADER_TYPES":
+        ("Bearer",),
+}
+
+
+# --------------------------------------------------
+# CORS
+# --------------------------------------------------
+
+CORS_ALLOWED_ORIGINS = [
+
+    "http://localhost:5173",
+
+    "http://127.0.0.1:5173",
+
 ]
 
 
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+# Add deployed frontend through environment variable.
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL"
+)
+
+if FRONTEND_URL:
+
+    CORS_ALLOWED_ORIGINS.append(
+        FRONTEND_URL
+    )
+
+
+CORS_ALLOW_CREDENTIALS = True
+
+
+# --------------------------------------------------
+# CSRF
+# --------------------------------------------------
+
+CSRF_TRUSTED_ORIGINS = [
+
+    "http://localhost:5173",
+
+    "http://127.0.0.1:5173",
+]
+
+
+if FRONTEND_URL and FRONTEND_URL.startswith("https://"):
+
+    CSRF_TRUSTED_ORIGINS.append(
+        FRONTEND_URL
+    )
+
+
+# --------------------------------------------------
+# DATABASE / LANGUAGE
+# --------------------------------------------------
+
+LANGUAGE_CODE = "en-us"
+
+TIME_ZONE = "UTC"
+
 USE_I18N = True
+
 USE_TZ = True
 
 
-CLOUDINARY_STORAGE = {
-    "RESOURCE_TYPE": "raw",
-}
+# --------------------------------------------------
+# STATIC FILES
+# --------------------------------------------------
 
-# STATIC & MEDIA
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
+
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+STATICFILES_STORAGE = (
+    "whitenoise.storage."
+    "CompressedManifestStaticFilesStorage"
+)
 
 
+# --------------------------------------------------
+# DEFAULT PRIMARY KEY
+# --------------------------------------------------
+
+DEFAULT_AUTO_FIELD = (
+    "django.db.models.BigAutoField"
+)
 
 
+# --------------------------------------------------
+# SECURITY HEADERS
+# --------------------------------------------------
 
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+if not DEBUG:
 
+    SECURE_SSL_REDIRECT = True
 
+    SESSION_COOKIE_SECURE = True
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+    CSRF_COOKIE_SECURE = True
 
+    SECURE_HSTS_SECONDS = 31536000
 
-# CORS
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOW_CREDENTIALS = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 
-CORS_ALLOWED_ORIGINS = [
-    "https://hirelogix.vercel.app",  
-]
+    SECURE_HSTS_PRELOAD = True
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://hirelogix.onrender.com",
-    "https://hirelogix.vercel.app",
-]
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+    X_FRAME_OPTIONS = "DENY"

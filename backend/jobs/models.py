@@ -1,96 +1,125 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class JobApplication(models.Model):
 
-    STAGE_CHOICES = [
-        ("APPLIED", "Applied"),
-        ("SHORTLISTED", "Shortlisted"),
-        ("ASSESSMENT", "Assessment"),
-        ("INTERVIEW", "Interview"),
-        ("OFFER", "Offer"),
-    ]
+    class Status(models.TextChoices):
 
-    VERDICT_CHOICES = [
-        ("ACCEPTED", "Accepted"),
-        ("REJECTED", "Rejected"),
-        ("GHOSTED", "Ghosted"),
-    ]
+        APPLIED = (
+            "applied",
+            "Applied",
+        )
+
+        UNDER_REVIEW = (
+            "under_review",
+            "Under Review",
+        )
+
+        INTERVIEW = (
+            "interview",
+            "Interview",
+        )
+
+        ASSESSMENT = (
+            "assessment",
+            "Assessment",
+        )
+
+        OFFER = (
+            "offer",
+            "Offer",
+        )
+
+        REJECTED = (
+            "rejected",
+            "Rejected",
+        )
+
+    class Source(models.TextChoices):
+
+        GMAIL = (
+            "gmail",
+            "Gmail",
+        )
+
+        MANUAL = (
+            "manual",
+            "Manual",
+        )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="jobs",
-        db_index=True,  
+        related_name="job_applications",
     )
 
-    job_title = models.CharField(max_length=100)
-    company = models.CharField(max_length=100)
-
-    stage = models.CharField(
-        max_length=20,
-        choices=STAGE_CHOICES,
-        default="APPLIED",
-        db_index=True,  
+    company_name = models.CharField(
+        max_length=255,
     )
 
-    verdict = models.CharField(
-        max_length=20,
-        choices=VERDICT_CHOICES,
-        null=True,
-        blank=True,
-        db_index=True, 
-    )
-
-    max_salary = models.PositiveIntegerField(
-        null=True,
+    role_title = models.CharField(
+        max_length=255,
         blank=True,
     )
 
-    resume = models.FileField(
-        upload_to="resumes/",
+    status = models.CharField(
+        max_length=30,
+        choices=Status.choices,
+        default=Status.APPLIED,
+    )
+
+    source = models.CharField(
+        max_length=20,
+        choices=Source.choices,
+        default=Source.MANUAL,
+    )
+
+    gmail_thread_id = models.CharField(
+        max_length=255,
+        blank=True,
         null=True,
-        blank=True
     )
 
-    notes = models.TextField(null=True, blank=True)
+    last_gmail_message_id = models.CharField(
+        max_length=255,
+        blank=True,
+    )
 
-    applied_date = models.DateField(db_index=True)
-    follow_up_date = models.DateField(null=True, blank=True)
+    last_email_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     class Meta:
-        indexes = [
-           
-            models.Index(fields=["user", "-created_at"]),
-            models.Index(fields=["user", "stage"]),
-            models.Index(fields=["user", "verdict"]),
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "user",
+                    "gmail_thread_id",
+                ],
+                name=(
+                    "unique_gmail_thread_per_user"
+                ),
+            )
+        ]
+
+        ordering = [
+            "-last_email_at",
+            "-updated_at",
         ]
 
     def __str__(self):
-        return f"{self.job_title} at {self.company}"
-
-
-class StageHistory(models.Model):
-    job = models.ForeignKey(
-        JobApplication,
-        on_delete=models.CASCADE,
-        related_name="history",
-        db_index=True,
-    )
-
-    from_stage = models.CharField(max_length=20)
-    to_stage = models.CharField(max_length=20)
-
-    changed_at = models.DateTimeField(auto_now_add=True, db_index=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["job", "-changed_at"]),
-        ]
-
-    def __str__(self):
-        return f"{self.from_stage} → {self.to_stage}"
+        return (
+            f"{self.company_name} - "
+            f"{self.get_status_display()}"
+        )

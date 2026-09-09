@@ -1,18 +1,26 @@
 from django.urls import path
-from .views import JobListCreateAPI, JobStageUpdateAPI, JobVerdictAPI,JobFilterAPI,JobDashboardStatsAPI, JobDetailAPI
-from django.conf import settings
-from django.conf.urls.static import static
+
+from .views import (
+    JobApplicationDetailView,
+    JobApplicationListView,
+    JobApplicationSummaryView,
+)
+
 
 urlpatterns = [
-    path("", JobListCreateAPI.as_view()),
-    path("<int:pk>/", JobDetailAPI.as_view()),
-    path("<int:pk>/stage/", JobStageUpdateAPI.as_view()),
-    path("<int:pk>/verdict/", JobVerdictAPI.as_view()),
-    path("filter/", JobFilterAPI.as_view()),
-    path("dashboard/", JobDashboardStatsAPI.as_view()),
+    path(
+        "",
+        JobApplicationListView.as_view(),
+        name="job-application-list",
+    ),
+    path(
+        "summary/",
+        JobApplicationSummaryView.as_view(),
+        name="job-application-summary",
+    ),
+    path(
+        "<int:pk>/",
+        JobApplicationDetailView.as_view(),
+        name="job-application-detail",
+    ),
 ]
-
-urlpatterns += static(
-    settings.MEDIA_URL,
-    document_root=settings.MEDIA_ROOT
-)
