@@ -14,8 +14,7 @@ import Permission from
 import Dashboard from
   "./pages/Dashboard";
 
-import ProtectedRoute from
-  "./components/ProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 
 function HomeRoute() {
