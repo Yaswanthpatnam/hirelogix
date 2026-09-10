@@ -15,19 +15,57 @@ class GmailSyncService:
 
     MAX_METADATA_WORKERS = 5
 
+    # These terms are intentionally focused on actual
+    # application lifecycle events.
+    #
+    # Avoid broad words such as "hiring" or "recruiter"
+    # because they can match newsletters, job alerts,
+    # marketing mail and unrelated messages.
     JOB_SEARCH_TERMS = [
+        # Application submitted / received
         "\"application received\"",
+        "\"application submitted\"",
+        "\"application was submitted\"",
+        "\"application was sent\"",
+        "\"your application was sent\"",
+        "\"application sent to\"",
+        "\"you applied to\"",
+        "\"successfully applied\"",
+        "\"successfully submitted\"",
+        "\"thanks for applying\"",
+        "\"thank you for applying\"",
+        "\"we received your application\"",
+
+        # Application status
         "\"application status\"",
         "\"application update\"",
         "\"under review\"",
+        "\"profile is under review\"",
+
+        # Assessment
         "\"coding test\"",
         "\"online assessment\"",
-        "\"offer letter\"",
+        "\"technical assessment\"",
+        "\"online test\"",
+        "\" Interview task\"",
+
+        # Interview
+        "\"interview invitation\"",
+        "\"interview scheduled\"",
+        "\"schedule an interview\"",
         "interview",
-        "assessment",
-        "recruiter",
+
+        # Offer
+        "\"offer letter\"",
+        "\"job offer\"",
+        "\"offer for\"",
+
+        # Rejection
         "rejected",
-        "hiring",
+        "\"not selected\"",
+        "\"application declined\"",
+        "\"application unsuccessful\"",
+        "\"we will not be moving forward\"",
     ]
 
     METADATA_HEADERS = [
@@ -71,12 +109,10 @@ class GmailSyncService:
         matched_keywords = []
 
         for keyword in cls.JOB_SEARCH_TERMS:
-
             clean_keyword = (
-                keyword.replace(
-                    "\"",
-                    "",
-                ).lower()
+                keyword
+                .replace("\"", "")
+                .lower()
             )
 
             if clean_keyword in searchable_text:
@@ -92,15 +128,11 @@ class GmailSyncService:
         access_token,
         message_id,
     ):
-        return (
-            GmailOAuthService.get_message(
-                access_token=access_token,
-                message_id=message_id,
-                message_format="metadata",
-                metadata_headers=(
-                    cls.METADATA_HEADERS
-                ),
-            )
+        return GmailOAuthService.get_message(
+            access_token=access_token,
+            message_id=message_id,
+            message_format="metadata",
+            metadata_headers=cls.METADATA_HEADERS,
         )
 
     @classmethod
@@ -141,9 +173,19 @@ class GmailSyncService:
                     ]
                 )
 
-                metadata_by_message_id[
-                    message_id
-                ] = future.result()
+                try:
+                    metadata_by_message_id[
+                        message_id
+                    ] = future.result()
+
+                except Exception as exc:
+                    # One broken/deleted Gmail message should
+                    # not abort the complete synchronization page.
+                    print(
+                        "GMAIL METADATA FETCH FAILED:",
+                        message_id,
+                        repr(exc),
+                    )
 
         return [
             metadata_by_message_id[message_id]
@@ -178,9 +220,7 @@ class GmailSyncService:
             )
 
         connection.last_history_id = history_id
-
         connection.incremental_next_page_token = None
-
         connection.pending_history_id = None
 
         connection.save(
@@ -213,28 +253,29 @@ class GmailSyncService:
             )
         )
 
+        if not matched_keywords:
+            return False
+
         _, created = (
-            GmailJobEmail.objects
-            .get_or_create(
+            GmailJobEmail.objects.get_or_create(
                 gmail_connection=connection,
                 message_id=metadata_message.get(
                     "id"
                 ),
                 defaults={
-                    "thread_id":
-                        metadata_message.get(
-                            "threadId",
-                            "",
-                        ),
-                    "sender":
-                        sender,
-                    "subject":
-                        subject,
-                    "email_date":
+                    "thread_id": metadata_message.get(
+                        "threadId",
+                        "",
+                    ),
+                    "sender": sender,
+                    "subject": subject,
+                    "email_date": (
                         headers.get("date")
-                        or "",
-                    "matched_keywords":
-                        matched_keywords,
+                        or ""
+                    ),
+                    "matched_keywords": (
+                        matched_keywords
+                    ),
                 },
             )
         )
@@ -265,27 +306,25 @@ class GmailSyncService:
             return "ignored"
 
         _, created = (
-            GmailJobEmail.objects
-            .get_or_create(
+            GmailJobEmail.objects.get_or_create(
                 gmail_connection=connection,
                 message_id=metadata_message.get(
                     "id"
                 ),
                 defaults={
-                    "thread_id":
-                        metadata_message.get(
-                            "threadId",
-                            "",
-                        ),
-                    "sender":
-                        sender,
-                    "subject":
-                        subject,
-                    "email_date":
+                    "thread_id": metadata_message.get(
+                        "threadId",
+                        "",
+                    ),
+                    "sender": sender,
+                    "subject": subject,
+                    "email_date": (
                         headers.get("date")
-                        or "",
-                    "matched_keywords":
-                        matched_keywords,
+                        or ""
+                    ),
+                    "matched_keywords": (
+                        matched_keywords
+                    ),
                 },
             )
         )
@@ -310,8 +349,7 @@ class GmailSyncService:
             return {
                 "search_query": (
                     cls.build_job_search_query(
-                        connection
-                        .job_search_started_on
+                        connection.job_search_started_on
                     )
                 ),
                 "candidate_count": 0,
@@ -348,7 +386,7 @@ class GmailSyncService:
 
         messages = messages_data.get(
             "messages",
-            []
+            [],
         )
 
         message_ids = [
@@ -368,7 +406,6 @@ class GmailSyncService:
         existing_count = 0
 
         for metadata_message in metadata_messages:
-
             created = (
                 cls.create_historical_candidate(
                     connection=connection,
@@ -396,12 +433,8 @@ class GmailSyncService:
         ]
 
         if not next_page_token:
-
             connection.historical_sync_completed = True
-
-            connection.last_sync_at = (
-                timezone.now()
-            )
+            connection.last_sync_at = timezone.now()
 
             cls.initialize_history_checkpoint(
                 connection
@@ -442,21 +475,24 @@ class GmailSyncService:
 
         for history_record in history_data.get(
             "history",
-            []
+            [],
         ):
-            messages_added = history_record.get(
-                "messagesAdded",
-                []
+            messages_added = (
+                history_record.get(
+                    "messagesAdded",
+                    [],
+                )
             )
 
             for message_added in messages_added:
-
                 message = message_added.get(
                     "message",
-                    {}
+                    {},
                 )
 
-                message_id = message.get("id")
+                message_id = message.get(
+                    "id"
+                )
 
                 if (
                     message_id
@@ -503,8 +539,8 @@ class GmailSyncService:
             )
         )
 
-        current_history_id = history_data.get(
-            "historyId"
+        current_history_id = (
+            history_data.get("historyId")
         )
 
         if (
@@ -533,7 +569,6 @@ class GmailSyncService:
         ignored_count = 0
 
         for metadata_message in metadata_messages:
-
             result = (
                 cls.create_incremental_candidate(
                     connection=connection,
@@ -566,17 +601,13 @@ class GmailSyncService:
         ]
 
         if not next_page_token:
-
             connection.last_history_id = (
                 connection.pending_history_id
                 or current_history_id
             )
 
             connection.pending_history_id = None
-
-            connection.last_sync_at = (
-                timezone.now()
-            )
+            connection.last_sync_at = timezone.now()
 
             update_fields.extend(
                 [
