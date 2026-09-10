@@ -430,6 +430,26 @@
   font-size: 12px;
 }
 
+.hl-text-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.hl-text-action svg {
+  flex: 0 0 auto;
+  display: block;
+}
+
 .hl-pipeline-content {
   display: grid;
   grid-template-columns: 230px minmax(0, 1fr);
@@ -542,16 +562,20 @@
 
 .hl-activity-chart {
   width: 100%;
-  min-height: 250px;
+  height: 100%;
+  min-height: 390px;
+  display: flex;
+  align-items: stretch;
   color: var(--brand);
 }
 
 .hl-activity-chart svg {
   width: 100%;
-  height: 250px;
+  height: 100%;
+  min-height: 360px;
+  display: block;
   overflow: visible;
 }
-
 .hl-chart-grid-line {
   stroke: rgba(255,255,255,0.09);
   stroke-width: 1;
@@ -596,41 +620,160 @@
   display: grid;
   gap: 0;
 }
+.hl-mini-timeline {
+  display: grid;
+  gap: 0;
+  width: 100%;
+}
+
 
 .hl-mini-timeline-item {
   display: grid;
-  grid-template-columns: 10px minmax(0,1fr) auto;
+
+  /*
+   * dot | application information | date
+   */
+  grid-template-columns:
+    8px
+    minmax(0, 1fr)
+    108px;
+
   align-items: center;
-  gap: 12px;
+
+  gap: 14px;
+
   width: 100%;
-  padding: 14px 0;
+
+  min-height: 76px;
+
+  padding: 10px 0;
+
   border: 0;
   border-bottom: 1px solid var(--border);
+
   background: transparent;
+
   color: var(--text-primary);
+
   text-align: left;
+
   cursor: pointer;
+
+  transition:
+    background 0.18s ease;
 }
+
 
 .hl-mini-timeline-item:last-child {
   border-bottom: 0;
 }
 
-.hl-mini-timeline-item strong,
-.hl-mini-timeline-item span,
+
+/*
+ * The application information itself
+ * becomes one clean horizontal row:
+ *
+ * Status | Company | Role
+ */
+.hl-mini-timeline-item > div {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(82px, 0.7fr)
+    minmax(110px, 1fr)
+    minmax(90px, 0.9fr);
+
+  align-items: center;
+
+  gap: 16px;
+}
+
+
+/*
+ * Status
+ */
+.hl-mini-timeline-item strong {
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  font-size: 13px;
+
+  font-weight: 650;
+}
+
+
+/*
+ * Company + role
+ */
+.hl-mini-timeline-item > div span {
+  min-width: 0;
+
+  display: block;
+
+  margin-top: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
+
+  line-height: 1.4;
+}
+
+
+/*
+ * Date stays in its own fixed column.
+ */
 .hl-mini-timeline-item time {
   display: block;
-}
 
-.hl-mini-timeline-item strong {
-  font-size: 13px;
-}
+  margin-top: 0;
 
-.hl-mini-timeline-item div span,
-.hl-mini-timeline-item time {
-  margin-top: 4px;
   color: var(--text-muted);
-  font-size: 11px;
+
+  font-size: 10px;
+
+  line-height: 1.35;
+
+  white-space: nowrap;
+
+  text-align: right;
+}
+
+
+.hl-mini-timeline-item:hover {
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.018
+    );
+}
+
+
+/*
+ * Timeline dot.
+ */
+.hl-mini-timeline-item > .hl-timeline-dot {
+  width: 8px;
+  height: 8px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
 }
 
 .hl-timeline-dot {
@@ -645,7 +788,7 @@
 
 .hl-recent-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1fr) 130px 120px 120px 20px;
+  grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 20px;
   align-items: center;
   gap: 18px;
   padding: 16px 12px;
@@ -1999,3 +2142,420 @@
   }
 
 }
+
+/* =========================================================
+   OVERVIEW — ACTIVITY + TIMELINE
+   Isolated overrides for the second overview row only.
+   The first .hl-overview-grid remains unchanged.
+========================================================= */
+
+.hl-activity-timeline-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.hl-activity-timeline-grid > .hl-panel {
+  height: 400px;
+  min-height: 400px;
+  max-height: 400px;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Keep the activity chart compact inside the fixed panel. */
+.hl-activity-timeline-grid .hl-activity-chart {
+  width: 100%;
+  height: 300px;
+  min-height: 300px;
+  max-height: 300px;
+  display: block;
+  box-sizing: border-box;
+}
+
+.hl-activity-timeline-grid .hl-activity-chart svg {
+  width: 100%;
+  height: 300px;
+  min-height: 300px;
+  max-height: 300px;
+  display: block;
+  overflow: visible;
+}
+
+/* Timeline gets the same usable height and scrolls internally. */
+.hl-activity-timeline-grid .hl-mini-timeline {
+  width: 100%;
+  height: 300px;
+  max-height: 300px;
+  display: grid;
+  gap: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  box-sizing: border-box;
+}
+
+/* One compact horizontal timeline row. */
+.hl-activity-timeline-grid .hl-mini-timeline-item {
+  width: 100%;
+  min-height: 62px;
+  height: 62px;
+  flex: 0 0 62px;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) 92px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px 8px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.hl-activity-timeline-grid .hl-mini-timeline-item > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(76px, 0.7fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.hl-activity-timeline-grid .hl-mini-timeline-item strong,
+.hl-activity-timeline-grid .hl-mini-timeline-item > div span,
+.hl-activity-timeline-grid .hl-mini-timeline-item time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hl-activity-timeline-grid .hl-mini-timeline-item strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.hl-activity-timeline-grid .hl-mini-timeline-item > div span {
+  display: block;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.hl-activity-timeline-grid .hl-mini-timeline-item time {
+  display: block;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+/*
+ * The full Timeline page later in this stylesheet also uses
+ * .hl-timeline-dot. Keep this mini dot isolated from those rules.
+ */
+.hl-activity-timeline-grid .hl-mini-timeline-item > .hl-timeline-dot {
+  position: static;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  max-width: 8px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+/* Preserve the existing hover treatment for the mini timeline. */
+.hl-activity-timeline-grid .hl-mini-timeline-item:hover {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+/* The mini timeline has its own scrollbar; do not affect full Timeline. */
+.hl-activity-timeline-grid .hl-mini-timeline::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hl-activity-timeline-grid .hl-mini-timeline::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hl-activity-timeline-grid .hl-mini-timeline::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+/* At smaller widths the existing one-column overview behavior remains. */
+@media (max-width: 620px) {
+  .hl-activity-timeline-grid > .hl-panel {
+    height: 380px;
+    min-height: 380px;
+    max-height: 380px;
+  }
+
+  .hl-activity-timeline-grid .hl-activity-chart,
+  .hl-activity-timeline-grid .hl-activity-chart svg,
+  .hl-activity-timeline-grid .hl-mini-timeline {
+    height: 280px;
+    min-height: 280px;
+    max-height: 280px;
+  }
+
+  .hl-activity-timeline-grid .hl-mini-timeline-item {
+    grid-template-columns: 8px minmax(0, 1fr) 82px;
+  }
+
+  .hl-activity-timeline-grid .hl-mini-timeline-item > div {
+    grid-template-columns: minmax(68px, 0.7fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+
+/* =========================================================
+   APPLICATION DETAIL PANEL
+   Isolated alignment/spacing fixes only.
+   Does not affect dashboard lists, overview cards, or full timeline.
+========================================================= */
+
+.detail-panel {
+  box-sizing: border-box;
+}
+
+.detail-content {
+  padding: 4px 24px 32px;
+  box-sizing: border-box;
+}
+
+.detail-company {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+  box-sizing: border-box;
+}
+
+.detail-company-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: rgba(135, 59, 191, 0.12);
+  color: var(--brand-light);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.detail-company-copy {
+  min-width: 0;
+}
+
+.detail-company-copy .detail-label {
+  display: block;
+  margin: 0 0 5px;
+}
+
+.detail-company-copy h1 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.detail-company-copy p {
+  min-width: 0;
+  margin: 4px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.detail-meta-grid {
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.detail-meta-card {
+  min-width: 0;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+  padding: 14px 15px;
+}
+
+.detail-meta-card > span {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.detail-meta-card > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+  text-align: right;
+}
+
+.detail-meta-card > .status-badge {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.detail-section {
+  box-sizing: border-box;
+}
+
+.detail-section h2 {
+  margin: 0 0 16px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.detail-info-list {
+  gap: 16px;
+}
+
+.detail-info-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.detail-info-row > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+.detail-info-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.detail-info-row > div > span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.detail-info-row > div > strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Clean vertical journey: fixed marker column + aligned labels. */
+.application-journey {
+  position: relative;
+  display: grid;
+  gap: 0;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.application-journey::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  bottom: 15px;
+  left: 13px;
+  width: 1px;
+  background: var(--border);
+}
+
+.application-journey-step {
+  position: relative;
+  z-index: 1;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.journey-marker {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: #100b15;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.application-journey-step span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.application-journey-step.completed .journey-marker {
+  border-color: rgba(135, 59, 191, 0.6);
+  background: rgba(135, 59, 191, 0.16);
+  color: var(--brand-light);
+}
+
+.application-journey-step.completed span {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 620px) {
+  .detail-content {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .detail-meta-card {
+    gap: 10px;
+  }
+}
+

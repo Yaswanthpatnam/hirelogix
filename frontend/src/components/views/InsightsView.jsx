@@ -14,56 +14,46 @@ export default function InsightsView({
   summary,
   jobs = [],
 }) {
-
   const total =
     Number(
-      summary?.total ||
-      jobs.length ||
+      summary?.historical?.total_applications ??
+      summary?.total ??
+      jobs.length ??
       0
     );
 
+  const historical =
+    summary?.historical || {};
+
+  const responded =
+    Number(
+      historical.response_count || 0
+    );
 
   const interviews =
     Number(
-      summary?.interview ||
-      0
+      historical.ever_interview || 0
     );
-
 
   const offers =
     Number(
-      summary?.offer ||
-      0
+      historical.ever_offer || 0
     );
-
-
-  const screening =
-    Number(
-      summary?.under_review ||
-      0
-    );
-
 
   const assessment =
     Number(
-      summary?.assessment ||
-      0
+      historical.ever_assessment || 0
     );
 
+  const screening =
+    Number(
+      historical.ever_under_review || 0
+    );
 
   const rejected =
     Number(
-      summary?.rejected ||
-      0
+      historical.ever_rejected || 0
     );
-
-
-  const responded =
-    screening +
-    assessment +
-    interviews +
-    offers +
-    rejected;
 
 
   const responseRate =
@@ -72,13 +62,11 @@ export default function InsightsView({
       total
     );
 
-
   const interviewRate =
     calculateRate(
       interviews,
       total
     );
-
 
   const offerRate =
     calculateRate(
@@ -90,31 +78,20 @@ export default function InsightsView({
   const strongestStage =
     [
       {
-        label:
-          "Screening",
-        value:
-          screening,
+        label: "Screening",
+        value: screening,
       },
-
       {
-        label:
-          "Assessment",
-        value:
-          assessment,
+        label: "Assessment",
+        value: assessment,
       },
-
       {
-        label:
-          "Interview",
-        value:
-          interviews,
+        label: "Interview",
+        value: interviews,
       },
-
       {
-        label:
-          "Offer",
-        value:
-          offers,
+        label: "Offer",
+        value: offers,
       },
     ]
       .sort(
@@ -128,11 +105,9 @@ export default function InsightsView({
 
 
   return (
-
     <div className="hl-page-view">
 
       <header className="hl-view-header">
-
         <div>
 
           <span className="hl-eyebrow">
@@ -148,101 +123,76 @@ export default function InsightsView({
           </p>
 
         </div>
-
       </header>
 
 
       <div className="hl-insights-grid">
 
         <article className="hl-insight-card">
-
-          <ChartNoAxesCombined
-            size={22}
-          />
+          <ChartNoAxesCombined size={22} />
 
           <span>
             Response rate
           </span>
 
           <strong>
-
             {responseRate}%
-
           </strong>
 
           <p>
-            Applications that moved beyond the initial stage.
+            Applications that received a meaningful response after submission.
           </p>
-
         </article>
 
 
         <article className="hl-insight-card">
-
-          <Target
-            size={22}
-          />
+          <Target size={22} />
 
           <span>
             Interview rate
           </span>
 
           <strong>
-
             {interviewRate}%
-
           </strong>
 
           <p>
-            Applications that currently reached interview stage.
+            Applications that reached an interview at any point.
           </p>
-
         </article>
 
 
         <article className="hl-insight-card">
-
-          <Sparkles
-            size={22}
-          />
+          <Sparkles size={22} />
 
           <span>
             Offer rate
           </span>
 
           <strong>
-
             {offerRate}%
-
           </strong>
 
           <p>
-            Offers relative to your tracked applications.
+            Applications that reached an offer stage.
           </p>
-
         </article>
 
 
         <article className="hl-insight-card">
-
-          <BriefcaseBusiness
-            size={22}
-          />
+          <BriefcaseBusiness size={22} />
 
           <span>
             Applications tracked
           </span>
 
           <strong>
-
             {total}
-
           </strong>
 
           <p>
-            Total applications currently available in HireLogix.
+            Applications identified from your tracked job-search activity.
           </p>
-
         </article>
 
       </div>
@@ -251,11 +201,7 @@ export default function InsightsView({
       <section className="hl-panel hl-insight-summary">
 
         <div className="hl-insight-summary-icon">
-
-          <Sparkles
-            size={22}
-          />
-
+          <Sparkles size={22} />
         </div>
 
 
@@ -266,104 +212,17 @@ export default function InsightsView({
           </h2>
 
           <p>
-
-            {
-              total === 0
-                ? "Start applying and HireLogix will build useful insights as your job-search activity grows."
-                : strongestStage?.value > 0
-                  ? `Most of your current application activity is in the ${strongestStage.label.toLowerCase()} stage.`
-                  : "Your applications are still in their early stages. More recruiter updates will create clearer insights."
-            }
-
+            {total === 0
+              ? "Start applying and HireLogix will build useful insights as your job-search activity grows."
+              : strongestStage?.value > 0
+                ? `${strongestStage.value} application${strongestStage.value === 1 ? "" : "s"} reached the ${strongestStage.label.toLowerCase()} stage.`
+                : "Your dashboard will become more insightful as more application updates arrive."}
           </p>
 
         </div>
 
       </section>
 
-
-      <section className="hl-panel">
-
-        <h2 className="hl-section-title">
-          Current distribution
-        </h2>
-
-
-        <div className="hl-distribution-list">
-
-          {
-            [
-              [
-                "Screening",
-                screening,
-              ],
-
-              [
-                "Assessment",
-                assessment,
-              ],
-
-              [
-                "Interview",
-                interviews,
-              ],
-
-              [
-                "Offer",
-                offers,
-              ],
-
-              [
-                "Rejected",
-                rejected,
-              ],
-            ].map(
-              (
-                [
-                  label,
-                  value,
-                ]
-              ) => (
-
-                <div
-                  key={label}
-                  className="hl-distribution-row"
-                >
-
-                  <span>
-                    {label}
-                  </span>
-
-                  <div>
-
-                    <i
-                      style={{
-                        width:
-                          `${calculateRate(
-                            value,
-                            total
-                          )}%`,
-                      }}
-                    />
-
-                  </div>
-
-                  <strong>
-                    {value}
-                  </strong>
-
-                </div>
-
-              )
-            )
-          }
-
-        </div>
-
-      </section>
-
     </div>
-
   );
-
 }

@@ -249,13 +249,14 @@ export default function Permission() {
           <p className="permission-intro">
             Your HireLogix account is connected.
             Now connect Gmail so HireLogix can
-            automatically detect job application
-            emails and keep your application status
-            up to date.
+            identify job-related emails and keep
+            your application status up to date.
+            We use read-only Gmail access for this.
           </p>
 
 
           <div className="permission-card">
+
 
             <div className="permission-card-header">
 
@@ -269,7 +270,7 @@ export default function Permission() {
                 </h2>
 
                 <p>
-                  Required for automatic tracking
+                  Read-only access for job tracking
                 </p>
               </div>
 
@@ -282,18 +283,18 @@ export default function Permission() {
             <div className="permission-list">
 
               <PermissionItem
-                title="Detect job application emails"
-                description="Identify emails related to jobs you've applied for."
+                title="Filter for job-related emails"
+                description="HireLogix looks for messages that match job-search signals such as applications, interviews, assessments, offers and rejections."
               />
 
               <PermissionItem
-                title="Track application updates"
-                description="Detect interview, rejection, offer and other application updates."
+                title="Use only the email information needed"
+                description="We use the sender, subject and date of relevant messages to identify application activity and updates."
               />
 
               <PermissionItem
-                title="Keep your dashboard updated"
-                description="Automatically reflect meaningful changes in your applications."
+                title="Keep your applications updated"
+                description="Relevant email activity is used to create or update your job applications and keep your dashboard current."
               />
 
             </div>
@@ -307,12 +308,16 @@ export default function Permission() {
 
               <div>
                 <strong>
-                  Your privacy comes first.
+                  Privacy-first Gmail access.
                 </strong>
 
                 <p>
-                  HireLogix requests read-only Gmail access for job-application tracking.
-                  We don't send or delete emails, and we don't sell your data.
+                  HireLogix filters Gmail for
+                  job-related messages instead of
+                  processing your inbox indiscriminately.
+                  We use limited email metadata for
+                  application tracking and do not store
+                  email bodies or attachments.
                 </p>
               </div>
 
@@ -337,7 +342,9 @@ export default function Permission() {
               onClick={handleConnectGmail}
               disabled={connecting}
             >
+
               <span>
+
                 {
                   connecting
                     ? (
@@ -356,31 +363,40 @@ export default function Permission() {
                     ? "Connecting Gmail..."
                     : "Connect Gmail"
                 }
+
               </span>
 
               <ArrowRight size={19} />
+
             </button>
 
 
             <p className="permission-note">
-              You'll be redirected to Google to review and approve the requested Gmail permissions.
+
+              You'll be redirected to Google to
+              review and approve the requested
+              read-only Gmail permission.
+
             </p>
 
           </div>
 
 
           <div className="permission-security">
+
             <LockKeyhole size={14} />
 
             <span>
-              Secure connection · You can revoke access anytime
+              Read-only Gmail access · Secure connection
             </span>
+
           </div>
 
         </section>
 
 
         <footer className="permission-footer">
+
           <span>
             HireLogix
           </span>
@@ -388,6 +404,7 @@ export default function Permission() {
           <span>
             Privacy-first job tracking
           </span>
+
         </footer>
 
       </div>

@@ -293,18 +293,8 @@ export function getStoredUser() {
 export function buildActivityData(
   jobs = []
 ) {
-
-  const safeJobs =
-    Array.isArray(
-      jobs
-    )
-      ? jobs
-      : [];
-
-
   const today =
     new Date();
-
 
   today.setHours(
     0,
@@ -313,36 +303,31 @@ export function buildActivityData(
     0
   );
 
-
   const days = [];
-
 
   for (
     let offset = 6;
     offset >= 0;
     offset -= 1
   ) {
-
     const date =
-      new Date(
-        today
-      );
-
+      new Date(today);
 
     date.setDate(
       today.getDate() -
       offset
     );
 
-
     const key =
-      date
-        .toISOString()
-        .slice(
-          0,
-          10
-        );
-
+      [
+        date.getFullYear(),
+        String(
+          date.getMonth() + 1
+        ).padStart(2, "0"),
+        String(
+          date.getDate()
+        ).padStart(2, "0"),
+      ].join("-");
 
     days.push({
       key,
@@ -351,16 +336,12 @@ export function buildActivityData(
         new Intl.DateTimeFormat(
           "en-IN",
           {
-            weekday:
-              "short",
+            weekday: "short",
           }
-        ).format(
-          date
-        ),
+        ).format(date),
 
       value: 0,
     });
-
   }
 
 
@@ -375,71 +356,60 @@ export function buildActivityData(
     );
 
 
-  safeJobs.forEach(
+  /*
+   * Fallback only.
+   *
+   * The real dashboard should use
+   * summary.activity from the backend.
+   */
+  jobs.forEach(
     (job) => {
-
-      if (!job) {
-
+      if (
+        !job ||
+        job.status !== "applied"
+      ) {
         return;
-
       }
 
-
-      const activityDate =
+      const value =
         job.last_email_at ||
-        job.updated_at ||
         job.created_at;
 
-
-      if (!activityDate) {
-
+      if (!value) {
         return;
-
       }
 
-
       const date =
-        new Date(
-          activityDate
-        );
-
+        new Date(value);
 
       if (
         Number.isNaN(
           date.getTime()
         )
       ) {
-
         return;
-
       }
-
 
       const key =
-        date
-          .toISOString()
-          .slice(
-            0,
-            10
-          );
-
+        [
+          date.getFullYear(),
+          String(
+            date.getMonth() + 1
+          ).padStart(2, "0"),
+          String(
+            date.getDate()
+          ).padStart(2, "0"),
+        ].join("-");
 
       const day =
-        dayMap.get(
-          key
-        );
-
+        dayMap.get(key);
 
       if (day) {
-
         day.value += 1;
-
       }
-
     }
   );
 
 
   return days;
-
 }

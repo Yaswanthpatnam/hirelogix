@@ -452,13 +452,10 @@ export default function Dashboard() {
           return (
 
             <TimelineView
-              jobs={
-                safeJobs
-              }
-              onSelect={
-                setSelectedJobId
-              }
-            />
+  jobs={safeJobs}
+  timeline={summary?.timeline || []}
+  onSelect={setSelectedJobId}
+/>
 
           );
 

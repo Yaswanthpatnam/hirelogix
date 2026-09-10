@@ -17,17 +17,11 @@ import {
 function normalizeJobs(
   jobsData
 ) {
-
   if (
-    Array.isArray(
-      jobsData
-    )
+    Array.isArray(jobsData)
   ) {
-
     return jobsData;
-
   }
-
 
   for (
     const key of [
@@ -36,39 +30,25 @@ function normalizeJobs(
       "data",
     ]
   ) {
-
     if (
       Array.isArray(
         jobsData?.[key]
       )
     ) {
-
-      return jobsData[
-        key
-      ];
-
+      return jobsData[key];
     }
-
   }
 
-
   return [];
-
 }
 
 
 function normalizeSummary(
   summaryData
 ) {
-
-  if (
-    !summaryData
-  ) {
-
+  if (!summaryData) {
     return null;
-
   }
-
 
   for (
     const key of [
@@ -77,99 +57,57 @@ function normalizeSummary(
       "summary",
     ]
   ) {
-
     if (
-      summaryData?.[
-        key
-      ] &&
-      typeof summaryData[
-        key
-      ] === "object" &&
-      !Array.isArray(
-        summaryData[
-          key
-        ]
-      )
+      summaryData?.[key] &&
+      typeof summaryData[key] === "object" &&
+      !Array.isArray(summaryData[key])
     ) {
-
-      return summaryData[
-        key
-      ];
-
+      return summaryData[key];
     }
-
   }
 
-
   return summaryData;
-
 }
 
 
 export default function useDashboardData() {
-
   const [
     summary,
     setSummary,
-  ] =
-    useState(
-      null
-    );
-
+  ] = useState(null);
 
   const [
     jobs,
     setJobs,
-  ] =
-    useState(
-      []
-    );
-
+  ] = useState([]);
 
   const [
     loading,
     setLoading,
-  ] =
-    useState(
-      true
-    );
-
+  ] = useState(true);
 
   const [
     error,
     setError,
-  ] =
-    useState(
-      ""
-    );
+  ] = useState("");
 
 
   const loadDashboardData =
     useCallback(
       async () => {
-
         try {
-
-          setLoading(
-            true
-          );
-
-          setError(
-            ""
-          );
-
+          setLoading(true);
+          setError("");
 
           const [
             summaryData,
             jobsData,
-          ] =
-            await Promise.all([
-              getJobSummary(),
-              getJobs({
-                page: 1,
-              }),
-            ]);
-
+          ] = await Promise.all([
+            getJobSummary(),
+            getJobs({
+              page: 1,
+            }),
+          ]);
 
           setSummary(
             normalizeSummary(
@@ -177,42 +115,31 @@ export default function useDashboardData() {
             )
           );
 
-
           setJobs(
             normalizeJobs(
               jobsData
             )
           );
 
-
           return true;
 
-        } catch (
-          err
-        ) {
-
+        } catch (err) {
           console.error(
             "Dashboard data failed:",
             err
           );
 
-
           setError(
             err?.response?.data?.detail ||
+            err?.response?.data?.error ||
             "Unable to load your job search data."
           );
-
 
           return false;
 
         } finally {
-
-          setLoading(
-            false
-          );
-
+          setLoading(false);
         }
-
       },
       []
     );
@@ -221,48 +148,34 @@ export default function useDashboardData() {
   const refresh =
     useCallback(
       async () => {
-
         try {
-
-          setLoading(
-            true
-          );
-
-          setError(
-            ""
-          );
-
+          setLoading(true);
+          setError("");
 
           /*
-           * STEP 1
+           * Gmail is checked first.
            *
-           * Ask Gmail to check messages that
-           * arrived after the previous history
-           * checkpoint.
+           * New Gmail message
+           *       ↓
+           * GmailJobEmail
+           *       ↓
+           * JobApplication
            */
-
           await syncIncrementalGmail();
 
-
           /*
-           * STEP 2
-           *
-           * Gmail sync has finished.
-           * Reload the database data so the
-           * dashboard reflects new applications.
+           * Only after Gmail synchronization completes
+           * do we reload dashboard data.
            */
-
           const [
             summaryData,
             jobsData,
-          ] =
-            await Promise.all([
-              getJobSummary(),
-              getJobs({
-                page: 1,
-              }),
-            ]);
-
+          ] = await Promise.all([
+            getJobSummary(),
+            getJobs({
+              page: 1,
+            }),
+          ]);
 
           setSummary(
             normalizeSummary(
@@ -270,25 +183,19 @@ export default function useDashboardData() {
             )
           );
 
-
           setJobs(
             normalizeJobs(
               jobsData
             )
           );
 
-
           return true;
 
-        } catch (
-          err
-        ) {
-
+        } catch (err) {
           console.error(
             "Dashboard refresh failed:",
             err
           );
-
 
           setError(
             err?.response?.data?.error ||
@@ -296,17 +203,11 @@ export default function useDashboardData() {
             "Unable to refresh Gmail job data."
           );
 
-
           return false;
 
         } finally {
-
-          setLoading(
-            false
-          );
-
+          setLoading(false);
         }
-
       },
       []
     );
@@ -314,9 +215,7 @@ export default function useDashboardData() {
 
   useEffect(
     () => {
-
       loadDashboardData();
-
     },
     [
       loadDashboardData,
@@ -331,5 +230,4 @@ export default function useDashboardData() {
     error,
     refresh,
   };
-
 }

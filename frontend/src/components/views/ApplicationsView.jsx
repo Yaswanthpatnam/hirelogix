@@ -287,7 +287,7 @@ export default function ApplicationsView({
           </p>
 
           <h1>
-            Applications.
+            Applications
           </h1>
 
           <p>

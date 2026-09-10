@@ -27,7 +27,6 @@ import ActivityChart from
 
 import {
   STATUS_COLORS,
-  buildActivityData,
   calculateRate,
   getCompanyColor,
   getInitials,
@@ -36,24 +35,16 @@ import {
 
 
 const STATUS_ORDER = [
-
   "applied",
-
   "under_review",
-
   "assessment",
-
   "interview",
-
   "offer",
-
   "rejected",
-
 ];
 
 
 const STATUS_LABELS = {
-
   applied:
     "Applied",
 
@@ -71,37 +62,28 @@ const STATUS_LABELS = {
 
   rejected:
     "Rejected",
-
 };
 
 
 function formatDate(
   value
 ) {
-
   if (!value) {
-
     return "Recently";
-
   }
-
 
   const date =
     new Date(
       value
     );
 
-
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
-
     return "Recently";
-
   }
-
 
   return new Intl.DateTimeFormat(
     "en-IN",
@@ -113,68 +95,6 @@ function formatDate(
   ).format(
     date
   );
-
-}
-
-
-function buildTimeline(
-  jobs
-) {
-
-  const safeJobs =
-    Array.isArray(
-      jobs
-    )
-      ? jobs
-      : [];
-
-
-  return (
-    [...safeJobs]
-      .filter(
-        (job) =>
-          job &&
-          (
-            job.last_email_at ||
-            job.updated_at ||
-            job.created_at
-          )
-      )
-      .sort(
-        (
-          first,
-          second
-        ) => {
-
-          const firstDate =
-            new Date(
-              first.last_email_at ||
-              first.updated_at ||
-              first.created_at
-            );
-
-
-          const secondDate =
-            new Date(
-              second.last_email_at ||
-              second.updated_at ||
-              second.created_at
-            );
-
-
-          return (
-            secondDate -
-            firstDate
-          );
-
-        }
-      )
-      .slice(
-        0,
-        4
-      )
-  );
-
 }
 
 
@@ -200,6 +120,16 @@ export default function Overview({
     );
 
 
+  /*
+   * =========================================================
+   * CURRENT PIPELINE COUNTS
+   * =========================================================
+   *
+   * These come directly from the Summary API.
+   *
+   * The Summary API is the source of truth for the current
+   * JobApplication state.
+   */
   const total =
     Number(
       summary?.total ??
@@ -243,12 +173,16 @@ export default function Overview({
     );
 
 
+  /*
+   * =========================================================
+   * PIPELINE DISTRIBUTION
+   * =========================================================
+   */
   const distribution =
     useMemo(
       () =>
         STATUS_ORDER.map(
           (status) => ({
-
             status,
 
             name:
@@ -267,7 +201,6 @@ export default function Overview({
               STATUS_COLORS[
                 status
               ],
-
           })
         ),
 
@@ -277,32 +210,83 @@ export default function Overview({
     );
 
 
+  /*
+   * =========================================================
+   * APPLICATION ACTIVITY
+   * =========================================================
+   *
+   * IMPORTANT:
+   *
+   * Do NOT calculate this from:
+   *
+   *   job.last_email_at
+   *   job.updated_at
+   *   job.created_at
+   *
+   * because those represent the application's latest/current
+   * database state and can therefore be an interview,
+   * assessment, rejection, etc.
+   *
+   * The backend Summary API now calculates activity from
+   * actual APPLIED Gmail events.
+   */
   const activityData =
     useMemo(
-      () =>
-        buildActivityData(
-          safeJobs
-        ),
+      () => {
+        const activity =
+          summary?.activity;
+
+        return Array.isArray(
+          activity
+        )
+          ? activity
+          : [];
+      },
 
       [
-        safeJobs,
+        summary,
       ]
     );
 
 
+  /*
+   * =========================================================
+   * APPLICATION TIMELINE
+   * =========================================================
+   *
+   * The backend now provides timeline events based on
+   * GmailJobEmail history instead of making the frontend
+   * guess from JobApplication.last_email_at.
+   */
   const timelineJobs =
     useMemo(
-      () =>
-        buildTimeline(
-          safeJobs
-        ),
+      () => {
+        const timeline =
+          summary?.timeline;
+
+        return Array.isArray(
+          timeline
+        )
+          ? timeline
+          : [];
+      },
 
       [
-        safeJobs,
+        summary,
       ]
     );
 
 
+  /*
+   * =========================================================
+   * CURRENT-STATE RESPONSE COUNT
+   * =========================================================
+   *
+   * Kept for the existing Overview UI.
+   *
+   * Insights uses the historical metrics returned by the
+   * Summary API.
+   */
   const responded =
     screening +
     assessment +
@@ -312,8 +296,11 @@ export default function Overview({
 
 
   return (
-
     <div className="hl-overview">
+
+      {/* =====================================================
+          OVERVIEW HEADER
+      ====================================================== */}
 
       <header className="hl-overview-header">
 
@@ -325,7 +312,7 @@ export default function Overview({
 
           <h1>
             Good morning,{" "}
-            {firstName}.
+            {firstName}
           </h1>
 
           <p>
@@ -356,6 +343,10 @@ export default function Overview({
 
       </header>
 
+
+      {/* =====================================================
+          STATISTICS
+      ====================================================== */}
 
       <div className="stats-grid">
 
@@ -418,7 +409,15 @@ export default function Overview({
       </div>
 
 
+      {/* =====================================================
+          PIPELINE + SEARCH INSIGHTS
+      ====================================================== */}
+
       <div className="hl-overview-grid">
+
+        {/* ---------------------------------------------------
+            APPLICATION PIPELINE
+        ---------------------------------------------------- */}
 
         <section className="hl-panel">
 
@@ -483,6 +482,10 @@ export default function Overview({
 
         </section>
 
+
+        {/* ---------------------------------------------------
+            SEARCH INSIGHTS
+        ---------------------------------------------------- */}
 
         <section className="hl-panel">
 
@@ -597,13 +600,21 @@ export default function Overview({
       </div>
 
 
-      <div className="hl-overview-grid">
+      {/* =====================================================
+          ACTIVITY + TIMELINE
+      ====================================================== */}
+
+      <div className="hl-overview-grid hl-activity-timeline-grid">
+
+        {/* ---------------------------------------------------
+            APPLICATION ACTIVITY
+        ---------------------------------------------------- */}
 
         <section className="hl-panel">
 
           <SectionHeading
             title="Application activity"
-            description="Recent application activity over the last seven days."
+            description="Applications submitted over the last seven days."
           />
 
 
@@ -616,11 +627,15 @@ export default function Overview({
         </section>
 
 
+        {/* ---------------------------------------------------
+            APPLICATION TIMELINE
+        ---------------------------------------------------- */}
+
         <section className="hl-panel">
 
           <SectionHeading
             title="Application timeline"
-            description="The latest movement across your job search."
+            description="The latest meaningful movement across your job search."
           />
 
 
@@ -628,9 +643,18 @@ export default function Overview({
 
             {
               timelineJobs.map(
-                (job) => {
+                (job, index) => {
 
+                  /*
+                   * IMPORTANT:
+                   *
+                   * Timeline objects from the Summary API use
+                   * event_date.
+                   *
+                   * Do not use last_email_at here.
+                   */
                   const date =
+                    job.event_date ||
                     job.last_email_at ||
                     job.updated_at ||
                     job.created_at;
@@ -640,12 +664,15 @@ export default function Overview({
 
                     <button
                       key={
-                        job.id
+                        job.job_id ||
+                        job.id ||
+                        index
                       }
                       className="hl-mini-timeline-item"
                       onClick={
                         () =>
                           onSelect?.(
+                            job.job_id ||
                             job.id
                           )
                       }
@@ -663,7 +690,7 @@ export default function Overview({
                       />
 
 
-                      <div>
+                      <div className="hl-mini-timeline-info">
 
                         <strong>
 
@@ -671,19 +698,24 @@ export default function Overview({
                             STATUS_LABELS[
                               job.status
                             ] ||
+                            job.status_display ||
                             "Application update"
                           }
 
                         </strong>
 
-                        <span>
+
+                        <span className="hl-mini-timeline-company">
 
                           {
                             job.company_name ||
                             "Company not identified"
                           }
 
-                          {" · "}
+                        </span>
+
+
+                        <span className="hl-mini-timeline-role">
 
                           {
                             job.role_title ||
@@ -716,9 +748,7 @@ export default function Overview({
               timelineJobs.length === 0 && (
 
                 <p className="hl-empty-copy">
-
                   Application updates will appear here.
-
                 </p>
 
               )
@@ -731,23 +761,32 @@ export default function Overview({
       </div>
 
 
+      {/* =====================================================
+          RECENT APPLICATIONS
+      ====================================================== */}
+
       <section className="hl-panel">
 
         <SectionHeading
           title="Recent applications"
           description="Your most recently updated applications."
           action={
+
             <button
               className="hl-text-action"
               onClick={
                 onApplications
               }
             >
+
               View all
+
               <ChevronRight
                 size={16}
               />
+
             </button>
+
           }
         />
 
@@ -797,27 +836,24 @@ export default function Overview({
                     </span>
 
 
-                    <div>
+                    <strong className="hl-recent-company">
 
-                      <strong>
+                      {
+                        job.company_name ||
+                        "Company not identified"
+                      }
 
-                        {
-                          job.company_name ||
-                          "Company not identified"
-                        }
+                    </strong>
 
-                      </strong>
 
-                      <span>
+                    <span className="hl-recent-role">
 
-                        {
-                          job.role_title ||
-                          "Role not identified"
-                        }
+                      {
+                        job.role_title ||
+                        "Role not identified"
+                      }
 
-                      </span>
-
-                    </div>
+                    </span>
 
 
                     <StatusBadge
@@ -843,7 +879,5 @@ export default function Overview({
       </section>
 
     </div>
-
   );
-
 }

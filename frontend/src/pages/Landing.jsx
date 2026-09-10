@@ -311,7 +311,9 @@ export default function Landing() {
 
         <p className="landing-privacy">
 
-          Your job-search data belongs to you.
+          Your inbox stays yours. HireLogix uses
+          read-only Gmail access to identify
+          job-related application emails.
 
         </p>
 
@@ -358,6 +360,8 @@ export default function Landing() {
 
             Sign in with Google to create your
             HireLogix account and continue.
+            Gmail access is requested separately
+            and is read-only.
 
           </p>
 
@@ -449,7 +453,7 @@ export default function Landing() {
               ✓
             </span>
 
-            No password required
+            Read-only Gmail access for job tracking
 
           </div>
 
