@@ -1,3 +1,4 @@
+import axios from "axios";
 import {
   BriefcaseBusiness,
   Clock3,
@@ -41,6 +42,7 @@ export default function Sidebar({
   totalApplications,
   user,
 }) {
+
   const displayName =
     getUserDisplayName(user);
 
@@ -49,17 +51,80 @@ export default function Sidebar({
     "Signed in";
 
 
-  const logout =
-    () => {
-      localStorage.removeItem("access");
-      localStorage.removeItem("refresh");
-      localStorage.removeItem("user");
-      localStorage.removeItem("is_new_user");
+  const logout = async () => {
 
-      window.location.assign("/");
-    };
+  const accessToken =
+    localStorage.getItem(
+      "access"
+    );
 
+  const refreshToken =
+    localStorage.getItem(
+      "refresh"
+    );
 
+  try {
+
+    if (accessToken && refreshToken) {
+
+      await axios.post(
+
+        `${
+          import.meta.env.VITE_API_BASE_URL ||
+          "http://localhost:8000"
+        }/user/auth/logout/`,
+
+        {
+          refresh:
+            refreshToken,
+        },
+
+        {
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${accessToken}`,
+          },
+        }
+
+      );
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Logout request failed:",
+      error
+    );
+
+  } finally {
+
+    localStorage.removeItem(
+      "access"
+    );
+
+    localStorage.removeItem(
+      "refresh"
+    );
+
+    localStorage.removeItem(
+      "user"
+    );
+
+    localStorage.removeItem(
+      "is_new_user"
+    );
+
+    window.location.assign(
+      "/"
+    );
+
+  }
+
+};
   return (
     <aside className="sidebar">
 
@@ -106,6 +171,7 @@ export default function Sidebar({
               label,
               icon: Icon,
             }) => (
+
               <button
                 key={label}
                 className={
@@ -118,21 +184,26 @@ export default function Sidebar({
                     onNavigate(label)
                 }
               >
+
                 <Icon size={17} />
 
                 <span>
                   {label}
                 </span>
 
+
                 {
                   label === "Applications" && (
+
                     <em>
                       {totalApplications}
                     </em>
+
                   )
                 }
 
               </button>
+
             )
           )
         }
@@ -149,6 +220,7 @@ export default function Sidebar({
           </div>
 
           <div className="profile-copy">
+
             <strong>
               {displayName}
             </strong>
@@ -156,6 +228,7 @@ export default function Sidebar({
             <span>
               {email}
             </span>
+
           </div>
 
           <MoreHorizontal size={16} />
@@ -167,9 +240,11 @@ export default function Sidebar({
           className="logout-button"
           onClick={logout}
         >
+
           <LogOut size={16} />
 
           Log out
+
         </button>
 
       </div>
