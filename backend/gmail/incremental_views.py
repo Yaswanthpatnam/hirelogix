@@ -7,7 +7,7 @@ from .gmail_sync_service import GmailSyncService
 from .models import GmailConnection
 
 
-class GmailIncrementalSyncAPI:
+class GmailIncrementalSyncAPI(APIView):
 
     permission_classes = [
         IsAuthenticated
