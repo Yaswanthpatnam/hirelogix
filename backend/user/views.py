@@ -12,6 +12,8 @@ from rest_framework_simplejwt.tokens import (
     RefreshToken,
 )
 
+from gmail.models import GmailConnection
+
 from .google_auth import (
     GoogleAuthService,
     GoogleAuthenticationError,
@@ -219,6 +221,7 @@ class GoogleLoginAPI(APIView):
             }
         )
 
+
 class ProfileAPI(APIView):
 
     permission_classes = [
@@ -266,6 +269,7 @@ class LogoutAPI(APIView):
             "refresh"
         )
 
+
         if refresh_token:
 
             try:
@@ -281,8 +285,52 @@ class LogoutAPI(APIView):
                 pass
 
 
+        # Clear the user's Gmail authorization
+        # when they explicitly log out.
+
+        try:
+
+            connection = (
+                GmailConnection.objects
+                .filter(
+                    user=request.user
+                )
+                .first()
+            )
+
+
+            if connection:
+
+                connection.access_token = ""
+
+                connection.refresh_token = None
+
+                connection.token_expires_at = None
+
+                connection.is_active = False
+
+                connection.save(
+                    update_fields=[
+                        "access_token",
+                        "refresh_token",
+                        "token_expires_at",
+                        "is_active",
+                        "updated_at",
+                    ]
+                )
+
+
+        except Exception as exc:
+
+            print(
+                "GMAIL LOGOUT CLEANUP ERROR:",
+                repr(exc)
+            )
+
+
         return Response({
 
             "message":
                 "Logged out successfully."
+
         })
