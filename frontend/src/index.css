@@ -1211,3 +1211,232 @@ button:focus-visible {
 .permission-spin {
   animation: hl-spin 0.9s linear infinite;
 }
+
+
+/* =========================================================
+   LANDING — MOBILE RESPONSIVE FIX
+   Isolated overrides only.
+   Desktop landing layout remains unchanged.
+========================================================= */
+
+@media (max-width: 900px) {
+
+  .landing-page {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .landing-left {
+    width: 100%;
+    min-height: auto;
+    padding:
+      110px
+      28px
+      48px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .landing-brand {
+    top: 28px;
+    left: 28px;
+  }
+
+  .landing-hero {
+    max-width: 620px;
+    margin-top: 0;
+  }
+
+  .landing-hero h1 {
+    font-size: clamp(56px, 15vw, 78px);
+    line-height: 0.91;
+  }
+
+  .landing-description {
+    max-width: 520px;
+    margin-top: 27px;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .journey {
+    max-width: 520px;
+    margin-top: 46px;
+  }
+
+  .landing-privacy {
+    position: static;
+    margin-top: 42px;
+    font-size: 9px;
+    line-height: 1.5;
+  }
+
+  .landing-right {
+    width: 100%;
+    min-height: auto;
+    padding:
+      48px
+      28px
+      64px;
+  }
+
+  .auth-card {
+    width: min(440px, 100%);
+    padding: 38px 28px;
+  }
+
+  .auth-card h2 {
+    font-size: clamp(48px, 13vw, 62px);
+  }
+
+}
+
+
+@media (max-width: 520px) {
+
+  .landing-left {
+    padding:
+      100px
+      20px
+      38px;
+  }
+
+  .landing-brand {
+    top: 24px;
+    left: 20px;
+  }
+
+  .brand-symbol {
+    width: 34px;
+    height: 34px;
+  }
+
+  .brand-name {
+    font-size: 18px;
+  }
+
+  .brand-tagline {
+    font-size: 7px;
+  }
+
+  .landing-eyebrow {
+    margin-bottom: 22px;
+    font-size: 8px;
+  }
+
+  .landing-hero h1 {
+    font-size: clamp(52px, 16vw, 68px);
+    letter-spacing: -0.06em;
+  }
+
+  .landing-description {
+    margin-top: 24px;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .journey {
+    margin-top: 40px;
+  }
+
+  .journey-step {
+    gap: 8px;
+    min-width: 40px;
+    font-size: 8px;
+  }
+
+  .journey-dot {
+    width: 23px;
+    height: 23px;
+  }
+
+  .journey-line {
+    left: 11px;
+    right: 11px;
+    top: 11px;
+  }
+
+  .landing-privacy {
+    margin-top: 36px;
+    font-size: 8px;
+  }
+
+  .landing-right {
+    padding:
+      36px
+      20px
+      50px;
+  }
+
+  .auth-card {
+    padding: 32px 22px;
+  }
+
+  .auth-status {
+    margin-bottom: 24px;
+  }
+
+  .auth-card h2 {
+    font-size: clamp(46px, 14vw, 58px);
+  }
+
+  .auth-description {
+    margin:
+      23px
+      0
+      27px;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+
+  .google-button {
+    height: 52px;
+  }
+
+}
+
+
+@media (max-width: 380px) {
+
+  .landing-left {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .landing-brand {
+    left: 16px;
+  }
+
+  .landing-hero h1 {
+    font-size: 48px;
+  }
+
+  .landing-description {
+    font-size: 12px;
+  }
+
+  .journey-step {
+    min-width: 34px;
+    font-size: 7px;
+  }
+
+  .journey-dot {
+    width: 21px;
+    height: 21px;
+  }
+
+  .landing-right {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .auth-card {
+    padding:
+      28px
+      18px;
+  }
+
+}
