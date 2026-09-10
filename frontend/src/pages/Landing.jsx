@@ -39,11 +39,22 @@ function GoogleIcon() {
 
 export default function Landing() {
 
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const [loading, setLoading] = useState(false);
 
-  const [error, setError] = useState("");
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(false);
+
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
 
 
   /*
@@ -59,121 +70,151 @@ export default function Landing() {
    * 2. Find/create our HireLogix user.
    * 3. Create JWT access + refresh tokens.
    * 4. Tell us whether this is a new user.
+   *
+   * IMPORTANT:
+   *
+   * Google authentication and Gmail authorization
+   * are two separate things.
+   *
+   * Being an existing HireLogix user does NOT mean
+   * that Gmail is currently connected.
    */
-  const handleGoogleSuccess = async (credentialResponse) => {
+  const handleGoogleSuccess =
+    async (credentialResponse) => {
 
-    try {
+      try {
 
-      setLoading(true);
+        setLoading(true);
 
-      setError("");
-
-
-      const credential =
-        credentialResponse?.credential;
+        setError("");
 
 
-      if (!credential) {
+        const credential =
+          credentialResponse?.credential;
 
-        throw new Error(
-          "Google did not return a credential."
+
+        if (!credential) {
+
+          throw new Error(
+            "Google did not return a credential."
+          );
+
+        }
+
+
+        const response =
+          await api.post(
+            "/user/auth/google/",
+            {
+              credential:
+                credential,
+            }
+          );
+
+
+        /*
+         * Store JWT tokens.
+         *
+         * The access token is used for
+         * authenticated API requests.
+         *
+         * The refresh token is used to
+         * obtain a new access token later.
+         */
+
+        localStorage.setItem(
+          "access",
+          response.data.access
         );
+
+
+        localStorage.setItem(
+          "refresh",
+          response.data.refresh
+        );
+
+
+        /*
+         * Store basic user information
+         * for frontend UI.
+         */
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(
+            response.data.user
+          )
+        );
+
+
+        /*
+         * Store whether Django considers
+         * this a new HireLogix account.
+         *
+         * This value may still be useful
+         * elsewhere in the application.
+         *
+         * It must NOT determine whether
+         * Gmail permission is required.
+         */
+
+        localStorage.setItem(
+          "is_new_user",
+          String(
+            response.data.is_new_user
+          )
+        );
+
+
+        /*
+         * Authentication succeeded.
+         *
+         * Gmail authorization is separate.
+         *
+         * ALWAYS send the user through the
+         * Gmail permission page.
+         *
+         * Permission.jsx will call:
+         *
+         * GET /gmail/status/
+         *
+         * and decide:
+         *
+         * connected = true
+         *     -> dashboard
+         *
+         * connected = false
+         *     -> show Connect Gmail
+         */
+
+        navigate(
+          "/permission",
+          {
+            replace: true,
+          }
+        );
+
+
+      } catch (err) {
+
+        console.error(
+          "Google login failed:",
+          err
+        );
+
+
+        setError(
+          "Unable to sign in with Google. Please try again."
+        );
+
+
+      } finally {
+
+        setLoading(false);
 
       }
 
-
-      const response = await api.post(
-        "/user/auth/google/",
-        {
-          credential: credential,
-        }
-      );
-
-
-      /*
-       * Store JWT tokens.
-       *
-       * The access token is used for
-       * authenticated API requests.
-       *
-       * The refresh token is used to
-       * obtain a new access token later.
-       */
-
-      localStorage.setItem(
-        "access",
-        response.data.access
-      );
-
-      localStorage.setItem(
-        "refresh",
-        response.data.refresh
-      );
-
-
-      /*
-       * Store basic user information
-       * for frontend UI.
-       */
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify(
-          response.data.user
-        )
-      );
-
-
-      /*
-       * Django tells us whether this
-       * account was newly created.
-       */
-
-      localStorage.setItem(
-        "is_new_user",
-        String(
-          response.data.is_new_user
-        )
-      );
-
-
-      /*
-       * Authentication succeeded.
-       *
-       * Continue to the Gmail permission
-       * page.
-       */
-
-      navigate(
-        response.data.is_new_user
-          ? "/permission"
-          : "/dashboard",
-        {
-          replace: true,
-        }
-      );
-
-
-    } catch (err) {
-
-      console.error(
-        "Google login failed:",
-        err
-      );
-
-
-      setError(
-        "Unable to sign in with Google. Please try again."
-      );
-
-
-    } finally {
-
-      setLoading(false);
-
-    }
-
-  };
+    };
 
 
   /*
@@ -181,15 +222,16 @@ export default function Landing() {
    * before reaching our backend.
    */
 
-  const handleGoogleError = () => {
+  const handleGoogleError =
+    () => {
 
-    setLoading(false);
+      setLoading(false);
 
-    setError(
-      "Google sign-in was cancelled or failed. Please try again."
-    );
+      setError(
+        "Google sign-in was cancelled or failed. Please try again."
+      );
 
-  };
+    };
 
 
   return (
@@ -418,7 +460,9 @@ export default function Landing() {
           {error && (
 
             <p className="auth-error">
+
               {error}
+
             </p>
 
           )}
