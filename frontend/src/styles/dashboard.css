@@ -2894,3 +2894,97 @@
     grid-template-columns: minmax(52px, 0.6fr) minmax(0, 1fr);
   }
 }
+
+
+/* =========================================================
+   OVERVIEW — RECENT APPLICATIONS COMPACT ROWS
+   Profile | Role | View arrow
+   Scoped to the dashboard overview only.
+   The full Applications page is untouched.
+========================================================= */
+
+.hl-overview .applications-panel .application-list-head {
+  display: none;
+}
+
+.hl-overview .applications-panel .application-row {
+  grid-template-columns:
+    38px
+    minmax(0, 1fr)
+    18px;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 0;
+}
+
+.hl-overview .applications-panel .company-cell {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.hl-overview .applications-panel .company-cell strong {
+  display: none;
+}
+
+.hl-overview .applications-panel .company-logo {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+}
+
+.hl-overview .applications-panel .role-cell {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.hl-overview .applications-panel .role-cell strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.hl-overview .applications-panel .role-cell span {
+  display: none;
+}
+
+.hl-overview .applications-panel .application-row > span,
+.hl-overview .applications-panel .status-badge {
+  display: none;
+}
+
+.hl-overview .applications-panel .row-chevron {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 620px) {
+
+  .hl-overview .applications-panel .application-row {
+    grid-template-columns:
+      36px
+      minmax(0, 1fr)
+      18px;
+    gap: 10px;
+    min-height: 60px;
+    padding: 9px 0;
+  }
+
+  .hl-overview .applications-panel .company-logo {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .hl-overview .applications-panel .role-cell strong {
+    font-size: 12px;
+  }
+
+}

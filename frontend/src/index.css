@@ -1440,3 +1440,46 @@ button:focus-visible {
   }
 
 }
+
+
+/* =========================================================
+   LANDING — LAYOUT ALIGNMENT + MOBILE TEXT CONTAINMENT
+   Surgical overrides only.
+   Desktop stays exactly 50 / 50.
+========================================================= */
+
+.landing-page {
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+}
+
+.landing-left,
+.landing-right {
+  min-width: 0;
+}
+
+.landing-hero,
+.landing-description,
+.landing-privacy,
+.auth-card {
+  min-width: 0;
+}
+
+.landing-privacy {
+  max-width:
+    calc(
+      100%
+      - (2 * clamp(50px, 7vw, 100px))
+    );
+}
+
+@media (max-width: 900px) {
+
+  .landing-privacy {
+    width: 100%;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+}
