@@ -49,6 +49,14 @@ class GmailService:
 
         if not connection.refresh_token:
 
+            connection.is_active = False
+
+            connection.save(
+                update_fields=[
+                    "is_active",
+                ]
+            )
+
             raise ValueError(
                 "Gmail access token has expired "
                 "and no refresh token is available. "
@@ -83,9 +91,17 @@ class GmailService:
                 repr(exc)
             )
 
+            connection.is_active = False
+
+            connection.save(
+                update_fields=[
+                    "is_active",
+                ]
+            )
 
             raise ValueError(
-                "Unable to refresh Gmail access. "
+                "Gmail authorization has expired "
+                "or was revoked. "
                 "Please reconnect Gmail."
             ) from exc
 
@@ -106,9 +122,18 @@ class GmailService:
 
         if not new_access_token:
 
+            connection.is_active = False
+
+            connection.save(
+                update_fields=[
+                    "is_active",
+                ]
+            )
+
             raise ValueError(
                 "Google did not return a new "
-                "access token."
+                "access token. "
+                "Please reconnect Gmail."
             )
 
 
@@ -129,10 +154,13 @@ class GmailService:
             )
 
 
+        connection.is_active = True
+
         connection.save(
             update_fields=[
                 "access_token",
                 "token_expires_at",
+                "is_active",
             ]
         )
 

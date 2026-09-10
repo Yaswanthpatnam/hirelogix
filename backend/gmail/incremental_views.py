@@ -7,7 +7,7 @@ from .gmail_sync_service import GmailSyncService
 from .models import GmailConnection
 
 
-class GmailIncrementalSyncAPI(APIView):
+class GmailIncrementalSyncAPI:
 
     permission_classes = [
         IsAuthenticated
@@ -62,16 +62,22 @@ class GmailIncrementalSyncAPI(APIView):
                             "Gmail change tracking has been "
                             "initialized. Future syncs will "
                             "check only new emails.",
+
                         "history_id_initialized":
                             history_id,
+
                         "new_message_count":
                             0,
+
                         "created_count":
                             0,
+
                         "existing_count":
                             0,
+
                         "ignored_count":
                             0,
+
                         "has_more":
                             False,
                     },
