@@ -1331,11 +1331,55 @@
   }
 
   .hl-recent-row {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 34px minmax(0, 1fr) 20px;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    row-gap: 3px;
+    min-width: 0;
+    padding: 12px 10px;
   }
 
-  .hl-recent-row > :not(:first-child):not(:last-child) {
+  .hl-recent-row > * {
+    min-width: 0;
+  }
+
+  .hl-recent-row > .hl-company-avatar {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .hl-recent-row > .hl-recent-company {
+    grid-column: 2;
+    grid-row: 1;
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hl-recent-row > .hl-recent-role {
+    grid-column: 2;
+    grid-row: 2;
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .hl-recent-row > .status-badge {
     display: none;
+  }
+
+  .hl-recent-row > svg:last-child {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    justify-self: end;
+    align-self: center;
   }
 }
 
@@ -2892,6 +2936,89 @@
 
   .hl-activity-timeline-grid .hl-mini-timeline-item > div {
     grid-template-columns: minmax(52px, 0.6fr) minmax(0, 1fr);
+  }
+}
+
+
+/* =========================================================
+   OVERVIEW — RECENT APPLICATIONS — ACTUAL ROW STRUCTURE
+   Surgical correction for the overview's .hl-recent-row JSX.
+   Full Applications page remains untouched.
+========================================================= */
+
+.hl-overview .hl-recent-row {
+  grid-template-columns:
+    34px
+    minmax(0, 1fr)
+    20px;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 3px;
+  min-width: 0;
+  padding: 12px 10px;
+}
+
+.hl-overview .hl-recent-row > .hl-company-avatar {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.hl-overview .hl-recent-row > .hl-recent-company {
+  grid-column: 2;
+  grid-row: 1;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hl-overview .hl-recent-row > .hl-recent-role {
+  grid-column: 2;
+  grid-row: 2;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.hl-overview .hl-recent-row > .status-badge {
+  display: none;
+}
+
+.hl-overview .hl-recent-row > svg:last-child {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  justify-self: end;
+  align-self: center;
+}
+
+@media (max-width: 620px) {
+  .hl-overview .hl-recent-row {
+    grid-template-columns:
+      32px
+      minmax(0, 1fr)
+      18px;
+    column-gap: 10px;
+    row-gap: 2px;
+    padding: 10px 0;
+  }
+
+  .hl-overview .hl-recent-row > .hl-company-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .hl-overview .hl-recent-row > .hl-recent-company {
+    font-size: 12px;
+  }
+
+  .hl-overview .hl-recent-row > .hl-recent-role {
+    font-size: 10px;
   }
 }
 
