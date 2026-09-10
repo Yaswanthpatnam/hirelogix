@@ -9,3 +9,4 @@ psycopg2-binary
 whitenoise
 requests
 google-auth
+gunicorn
