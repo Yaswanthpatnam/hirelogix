@@ -494,6 +494,60 @@ button:focus-visible {
 }
 
 
+.google-login-wrapper {
+  position: relative;
+  width: 100%;
+  height: 55px;
+  min-height: 55px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.google-login-wrapper > div {
+  width: 100% !important;
+  height: 55px !important;
+  min-height: 55px;
+  display: flex;
+  align-items: center;
+}
+
+.google-login-wrapper iframe {
+  display: block !important;
+  width: 100% !important;
+  height: 55px !important;
+  min-height: 55px !important;
+  max-width: 100% !important;
+  border: 0 !important;
+}
+
+.google-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #f5f2f5;
+  color: #28222a;
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.google-loading-overlay .google-loading-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 2px solid rgba(135, 59, 191, 0.18);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: google-spin 0.7s linear infinite;
+}
+
+
 .google-button {
   width: 100%;
   height: 55px;
@@ -1393,10 +1447,6 @@ button:focus-visible {
       27px;
     font-size: 12px;
     line-height: 1.65;
-  }
-
-  .google-button {
-    height: 52px;
   }
 
 }

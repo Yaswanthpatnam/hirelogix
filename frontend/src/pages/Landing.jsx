@@ -76,8 +76,9 @@ export default function Landing() {
    * Google authentication and Gmail authorization
    * are two separate things.
    *
-   * Being an existing HireLogix user does NOT mean
-   * that Gmail is currently connected.
+   * Authentication succeeds first.
+   * Gmail permission is handled separately
+   * on Permission.jsx.
    */
   const handleGoogleSuccess =
     async (credentialResponse) => {
@@ -85,7 +86,6 @@ export default function Landing() {
       try {
 
         setLoading(true);
-
         setError("");
 
 
@@ -114,14 +114,7 @@ export default function Landing() {
 
         /*
          * Store JWT tokens.
-         *
-         * The access token is used for
-         * authenticated API requests.
-         *
-         * The refresh token is used to
-         * obtain a new access token later.
          */
-
         localStorage.setItem(
           "access",
           response.data.access
@@ -138,7 +131,6 @@ export default function Landing() {
          * Store basic user information
          * for frontend UI.
          */
-
         localStorage.setItem(
           "user",
           JSON.stringify(
@@ -148,16 +140,13 @@ export default function Landing() {
 
 
         /*
-         * Store whether Django considers
-         * this a new HireLogix account.
+         * Keep the existing new-user value
+         * for any other frontend code that
+         * may use it.
          *
-         * This value may still be useful
-         * elsewhere in the application.
-         *
-         * It must NOT determine whether
-         * Gmail permission is required.
+         * It does NOT decide whether Gmail
+         * permission is required.
          */
-
         localStorage.setItem(
           "is_new_user",
           String(
@@ -167,26 +156,15 @@ export default function Landing() {
 
 
         /*
-         * Authentication succeeded.
+         * Google authentication is complete.
          *
          * Gmail authorization is separate.
          *
-         * ALWAYS send the user through the
-         * Gmail permission page.
-         *
-         * Permission.jsx will call:
-         *
-         * GET /gmail/status/
-         *
-         * and decide:
-         *
-         * connected = true
-         *     -> dashboard
-         *
-         * connected = false
-         *     -> show Connect Gmail
+         * ALWAYS continue through Permission.
+         * Permission.jsx checks /gmail/status/
+         * and decides whether to show Connect Gmail
+         * or continue to the dashboard.
          */
-
         navigate(
           "/permission",
           {
@@ -221,7 +199,6 @@ export default function Landing() {
    * Google authentication failed
    * before reaching our backend.
    */
-
   const handleGoogleError =
     () => {
 
@@ -412,45 +389,48 @@ export default function Landing() {
               GOOGLE LOGIN
           ================================================= */}
 
-          <div className="google-login-wrapper">
+          <div
+            className="google-login-wrapper"
+            aria-busy={loading}
+          >
 
-            {loading ? (
+            <GoogleLogin
+              onSuccess={
+                handleGoogleSuccess
+              }
 
-              <div className="google-loading">
+              onError={
+                handleGoogleError
+              }
 
-                <span className="google-loading-spinner" />
+              useOneTap={false}
 
-                Connecting...
+              theme="filled_white"
 
-              </div>
+              size="large"
 
-            ) : (
+              text="continue_with"
 
-              <GoogleLogin
+              shape="rectangular"
 
-                onSuccess={
-                  handleGoogleSuccess
-                }
+              width="100%"
+            />
 
-                onError={
-                  handleGoogleError
-                }
 
-                useOneTap={false}
+            {
+              loading && (
+                <div
+                  className="google-loading-overlay"
+                  aria-hidden="true"
+                >
 
-                theme="filled_white"
+                  <span className="google-loading-spinner" />
 
-                size="large"
+                  Connecting...
 
-                text="continue_with"
-
-                shape="rectangular"
-
-                width="100%"
-
-              />
-
-            )}
+                </div>
+              )
+            }
 
           </div>
 

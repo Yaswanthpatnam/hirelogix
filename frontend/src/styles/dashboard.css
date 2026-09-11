@@ -768,13 +768,23 @@
 
 .hl-recent-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1fr) 130px 120px 120px 20px;
+  grid-template-columns:
+    34px
+    minmax(170px, 1.05fr)
+    minmax(220px, 1.55fr)
+    112px
+    18px;
   align-items: center;
-  gap: 18px;
-  padding: 16px 12px;
+  column-gap: 18px;
+  row-gap: 0;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 12px;
   border-top: 1px solid var(--border);
   background: transparent;
   color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
 }
 
 .hl-recent-row:hover,
@@ -2941,26 +2951,41 @@
 
 
 /* =========================================================
-   OVERVIEW — RECENT APPLICATIONS — ACTUAL ROW STRUCTURE
-   Surgical correction for the overview's .hl-recent-row JSX.
-   Full Applications page remains untouched.
+   OVERVIEW — RECENT APPLICATIONS
+   Desktop: Profile | Company | Role | Status | Arrow
+   Mobile:  Profile | Company + Role | Arrow
+   The full Applications page remains untouched.
 ========================================================= */
+
+.hl-overview .hl-recent-list {
+  width: 100%;
+}
 
 .hl-overview .hl-recent-row {
   grid-template-columns:
     34px
-    minmax(0, 1fr)
-    20px;
-  grid-template-rows: auto auto;
-  column-gap: 12px;
-  row-gap: 3px;
+    minmax(170px, 1.05fr)
+    minmax(220px, 1.55fr)
+    112px
+    18px;
+  grid-template-rows: 1fr;
+  align-items: center;
+  column-gap: 18px;
+  row-gap: 0;
   min-width: 0;
-  padding: 12px 10px;
+  padding: 14px 12px;
+}
+
+.hl-overview .hl-recent-row > * {
+  min-width: 0;
 }
 
 .hl-overview .hl-recent-row > .hl-company-avatar {
   grid-column: 1;
-  grid-row: 1 / span 2;
+  grid-row: 1;
+  width: 34px;
+  height: 34px;
+  justify-self: start;
 }
 
 .hl-overview .hl-recent-row > .hl-recent-company {
@@ -2971,31 +2996,85 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .hl-overview .hl-recent-row > .hl-recent-role {
-  grid-column: 2;
-  grid-row: 2;
+  grid-column: 3;
+  grid-row: 1;
   display: block;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.35;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .hl-overview .hl-recent-row > .status-badge {
-  display: none;
+  grid-column: 4;
+  grid-row: 1;
+  display: inline-flex;
+  justify-self: start;
+  min-width: 0;
+  max-width: 112px;
 }
 
 .hl-overview .hl-recent-row > svg:last-child {
-  grid-column: 3;
-  grid-row: 1 / span 2;
+  grid-column: 5;
+  grid-row: 1;
+  width: 18px;
+  height: 18px;
   justify-self: end;
   align-self: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
+
+/* View all must stay a single compact control:
+   "View all  >" on every screen size. */
+.hl-overview .section-heading > .hl-text-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  flex: 0 0 auto;
+  gap: 5px;
+  margin: 1px 0 0 auto;
+  padding: 4px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-align: right;
+  cursor: pointer;
+}
+
+.hl-overview .section-heading > .hl-text-action:hover {
+  color: var(--text-primary);
+}
+
+.hl-overview .section-heading > .hl-text-action svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+/* =========================================================
+   MOBILE RECENT APPLICATIONS
+   Keep only profile/company + role + arrow.
+========================================================= */
 
 @media (max-width: 620px) {
   .hl-overview .hl-recent-row {
@@ -3003,115 +3082,81 @@
       32px
       minmax(0, 1fr)
       18px;
+    grid-template-rows: auto auto;
     column-gap: 10px;
     row-gap: 2px;
     padding: 10px 0;
   }
 
   .hl-overview .hl-recent-row > .hl-company-avatar {
+    grid-column: 1;
+    grid-row: 1 / span 2;
     width: 32px;
     height: 32px;
   }
 
   .hl-overview .hl-recent-row > .hl-recent-company {
+    grid-column: 2;
+    grid-row: 1;
+    display: block;
     font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .hl-overview .hl-recent-row > .hl-recent-role {
+    grid-column: 2;
+    grid-row: 2;
+    display: block;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.35;
+  }
+
+  .hl-overview .hl-recent-row > .status-badge {
+    display: none;
+  }
+
+  .hl-overview .hl-recent-row > svg:last-child {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    justify-self: end;
+    align-self: center;
+  }
+
+  .hl-overview .section-heading > .hl-text-action {
+    align-self: flex-start;
+    margin-top: 1px;
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .hl-overview .section-heading > .hl-text-action svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .hl-overview .hl-recent-row {
+    grid-template-columns:
+      30px
+      minmax(0, 1fr)
+      17px;
+    column-gap: 9px;
+  }
+
+  .hl-overview .hl-recent-row > .hl-company-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .hl-overview .hl-recent-row > .hl-recent-company {
+    font-size: 11px;
   }
 
   .hl-overview .hl-recent-row > .hl-recent-role {
     font-size: 10px;
   }
-}
-
-
-/* =========================================================
-   OVERVIEW — RECENT APPLICATIONS COMPACT ROWS
-   Profile | Role | View arrow
-   Scoped to the dashboard overview only.
-   The full Applications page is untouched.
-========================================================= */
-
-.hl-overview .applications-panel .application-list-head {
-  display: none;
-}
-
-.hl-overview .applications-panel .application-row {
-  grid-template-columns:
-    38px
-    minmax(0, 1fr)
-    18px;
-  align-items: center;
-  gap: 12px;
-  min-height: 64px;
-  padding: 10px 0;
-}
-
-.hl-overview .applications-panel .company-cell {
-  grid-column: 1;
-  min-width: 0;
-}
-
-.hl-overview .applications-panel .company-cell strong {
-  display: none;
-}
-
-.hl-overview .applications-panel .company-logo {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  border-radius: 10px;
-}
-
-.hl-overview .applications-panel .role-cell {
-  grid-column: 2;
-  min-width: 0;
-}
-
-.hl-overview .applications-panel .role-cell strong {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-}
-
-.hl-overview .applications-panel .role-cell span {
-  display: none;
-}
-
-.hl-overview .applications-panel .application-row > span,
-.hl-overview .applications-panel .status-badge {
-  display: none;
-}
-
-.hl-overview .applications-panel .row-chevron {
-  grid-column: 3;
-  grid-row: 1;
-  justify-self: end;
-  width: 18px;
-  height: 18px;
-}
-
-@media (max-width: 620px) {
-
-  .hl-overview .applications-panel .application-row {
-    grid-template-columns:
-      36px
-      minmax(0, 1fr)
-      18px;
-    gap: 10px;
-    min-height: 60px;
-    padding: 9px 0;
-  }
-
-  .hl-overview .applications-panel .company-logo {
-    width: 32px;
-    height: 32px;
-    flex-basis: 32px;
-  }
-
-  .hl-overview .applications-panel .role-cell strong {
-    font-size: 12px;
-  }
-
 }
