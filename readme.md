@@ -188,9 +188,6 @@ hirelogix/
 │   ├── index.html
 │   ├── package.json
 │   └── vite.config.js
-├── docs/                           # Architecture guides & publication documents
-│   ├── HireLogix_Complete_Architecture_and_Engineering_Guide.html # Printable PDF manual
-│   └── HireLogix_Complete_Architecture_and_Engineering_Guide.md   # Markdown manual
 └── README.md
 ```
 
@@ -332,4 +329,3 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
 - **Author / Lead Architect:** Yaswanth Patnam
 - **GitHub Repository:** [Yaswanthpatnam/hirelogix (hirelogix-v2)](https://github.com/Yaswanthpatnam/hirelogix/tree/hirelogix-v2)
 - **Live Application:** [hirelogix.vercel.app](https://hirelogix.vercel.app/)
-- **Documentation:** [Complete Architecture & Engineering Guide (docs/)](docs/HireLogix_Complete_Architecture_and_Engineering_Guide.md)
