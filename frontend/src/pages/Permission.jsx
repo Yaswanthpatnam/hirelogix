@@ -1,11 +1,11 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
 import {
   useNavigate,
-  useSearchParams,
 } from "react-router-dom";
 
 import {
@@ -21,17 +21,13 @@ import {
 import {
   getGmailConnectionStatus,
   startGmailAuthorization,
+  syncHistoricalGmail,
 } from "../services/gmail";
 
 
 export default function Permission() {
   const navigate =
     useNavigate();
-
-  const [
-    searchParams,
-  ] =
-    useSearchParams();
 
   const [
     connecting,
@@ -51,156 +47,121 @@ export default function Permission() {
   ] =
     useState("");
 
+  const [
+    checkingMessage,
+    setCheckingMessage,
+  ] =
+    useState("Preparing your job-search workspace…");
 
-  useEffect(
-    () => {
-      let cancelled = false;
+  useEffect(() => {
+    let cancelled = false;
 
-      const checkConnection =
-        async () => {
-          try {
-            const data =
-              await getGmailConnectionStatus();
-
-            if (
-              cancelled
-            ) {
-              return;
-            }
-
-            if (
-              data?.connected
-            ) {
-              navigate(
-                "/dashboard",
-                {
-                  replace: true,
-                }
-              );
-
-              return;
-            }
-
-            const gmailError =
-              searchParams.get(
-                "gmail_error"
-              );
-
-            if (gmailError) {
-              setError(
-                "Gmail connection was not completed. Please try again."
-              );
-            }
-          } catch (
-            err
-          ) {
-            console.error(
-              "Unable to check Gmail connection:",
-              err
-            );
-
-            if (
-              !cancelled
-            ) {
-              setError(
-                "We could not verify the Gmail connection right now. Please try again."
-              );
-            }
-          } finally {
-            if (
-              !cancelled
-            ) {
-              setCheckingConnection(
-                false
-              );
-            }
-          }
-        };
-
-      checkConnection();
-
-      return () => {
-        cancelled = true;
-      };
-    },
-    [
-      navigate,
-      searchParams,
-    ]
-  );
-
-
-  const handleConnectGmail =
-    async () => {
+    const checkConnection = async () => {
       try {
-        setConnecting(true);
-        setError("");
+        const data = await getGmailConnectionStatus();
 
-        const data =
-          await startGmailAuthorization();
-
-        const authorizationUrl =
-          data?.authorization_url;
-
-        if (
-          !authorizationUrl
-        ) {
-          throw new Error(
-            "Gmail authorization URL was not returned."
-          );
+        if (cancelled) {
+          return;
         }
 
-        window.location.assign(
-          authorizationUrl
-        );
-      } catch (
-        err
-      ) {
-        console.error(
-          "Gmail authorization failed:",
-          err
-        );
+        if (!data?.connected) {
+          setCheckingConnection(false);
 
-        setError(
-          "Unable to connect Gmail right now. Please try again."
-        );
+          const gmailError = new URLSearchParams(window.location.search).get("gmail_error");
+          if (gmailError) {
+            setError("Gmail connection was not completed. Please try again.");
+          }
+          return;
+        }
 
-        setConnecting(false);
+        if (cancelled) {
+          return;
+        }
+
+        // Transition immediately to dashboard!
+        setCheckingConnection(false);
+        navigate("/dashboard", { replace: true });
+      } catch (err) {
+        console.error("Unable to check Gmail connection:", err);
+        if (!cancelled) {
+          setError(
+            err?.response?.data?.error ||
+            err?.response?.data?.detail ||
+            "We could not verify the Gmail connection right now. Please try again."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setCheckingConnection(false);
+        }
       }
     };
+
+    checkConnection();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  const handleConnectGmail = async () => {
+    try {
+      setConnecting(true);
+      setError("");
+
+      const data = await startGmailAuthorization();
+
+      if (data?.already_connected) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      const authorizationUrl = data?.authorization_url;
+
+      if (!authorizationUrl) {
+        throw new Error(
+          "Gmail authorization URL was not returned."
+        );
+      }
+
+      window.location.assign(authorizationUrl);
+    } catch (err) {
+      console.error("Gmail authorization failed:", err);
+      setError("Unable to connect Gmail right now. Please try again.");
+      setConnecting(false);
+    }
+  };
 
 
   if (
     checkingConnection
   ) {
     return (
-      <main className="permission-page permission-checking-page">
+      <main className="permission-page">
+        <div className="permission-glow permission-glow-one" />
+        <div className="permission-glow permission-glow-two" />
+        <div className="permission-container" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "75vh" }}>
+          <div style={{ textAlign: "center", maxWidth: "480px" }}>
+            <div style={{ display: "inline-flex", padding: "16px", borderRadius: "18px", background: "rgba(135, 59, 191, 0.14)", color: "var(--brand-light)", marginBottom: "20px" }}>
+              <Loader2
+                size={30}
+                className="permission-spin"
+              />
+            </div>
 
-        <div className="permission-checking-card">
-
-          <div className="permission-checking-icon">
-            <Loader2
-              size={26}
-              className="permission-spin"
-            />
-          </div>
-
-          <div>
-            <span>
+            <div style={{ color: "var(--brand-light)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.14em", marginBottom: "8px" }}>
               HIRELOGIX
-            </span>
+            </div>
 
-            <h1>
-              Checking your Gmail connection
+            <h1 style={{ fontSize: "28px", fontWeight: 500, margin: "0 0 10px", color: "var(--text-primary)" }}>
+              Checking your connection
             </h1>
 
-            <p>
-              Preparing your job search workspace…
+            <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: 0 }}>
+              {checkingMessage}
             </p>
           </div>
-
         </div>
-
       </main>
     );
   }
@@ -337,14 +298,19 @@ export default function Permission() {
             }
 
 
+            {
+              /*
+               * Gmail is connected. The first historical synchronization
+               * starts automatically and runs before the dashboard opens.
+               */
+            }
+
             <button
               className="permission-connect"
               onClick={handleConnectGmail}
               disabled={connecting}
             >
-
               <span>
-
                 {
                   connecting
                     ? (
@@ -363,20 +329,15 @@ export default function Permission() {
                     ? "Connecting Gmail..."
                     : "Connect Gmail"
                 }
-
               </span>
 
               <ArrowRight size={19} />
-
             </button>
 
-
             <p className="permission-note">
-
               You'll be redirected to Google to
               review and approve the requested
               read-only Gmail permission.
-
             </p>
 
           </div>
@@ -438,3 +399,4 @@ function PermissionItem({
     </div>
   );
 }
+

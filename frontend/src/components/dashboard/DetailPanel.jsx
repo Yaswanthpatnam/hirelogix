@@ -2,26 +2,39 @@ import { useEffect, useState } from "react";
 import {
   Building2,
   Calendar,
+  ChevronDown,
   MapPin,
   X,
   Loader2,
 } from "lucide-react";
 
-import { getJobById } from "../../services/jobs";
+import {
+  getJobById,
+  updateJobApplication,
+} from "../../services/jobs";
 
 import {
   formatDate,
   getStatusLabel,
 } from "../../utils/jobHelpers";
 
+const STATUS_OPTIONS = [
+  { value: "applied", label: "Applied" },
+  { value: "under_review", label: "Screening" },
+  { value: "assessment", label: "Assessment" },
+  { value: "interview", label: "Interview" },
+  { value: "offer", label: "Offer" },
+  { value: "rejected", label: "Rejected" },
+];
+
 export default function DetailPanel({
   jobId,
   onClose,
+  onJobUpdated,
 }) {
   const [job, setJob] = useState(null);
-
   const [loading, setLoading] = useState(true);
-
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(
@@ -64,6 +77,43 @@ export default function DetailPanel({
     },
     [jobId]
   );
+
+  const handleStatusChange = async (newStatus) => {
+    if (!job || job.status === newStatus || updating) {
+      return;
+    }
+
+    const previousStatus = job.status;
+    const updatedJob = {
+      ...job,
+      status: newStatus,
+    };
+
+    setJob(updatedJob);
+    setUpdating(true);
+
+    try {
+      const savedJob = await updateJobApplication(
+        job.id,
+        { status: newStatus }
+      );
+
+      const finalJob = savedJob || updatedJob;
+      setJob(finalJob);
+      onJobUpdated?.(finalJob);
+    } catch (err) {
+      console.error(
+        "Failed to update status:",
+        err
+      );
+      setJob((prev) => ({
+        ...prev,
+        status: previousStatus,
+      }));
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <>
@@ -140,29 +190,51 @@ export default function DetailPanel({
                   </h1>
 
                   <p>
-                    {job.role_title}
+                    {job.role_title || "Role not specified"}
                   </p>
                 </div>
               </section>
 
-              {/* STATUS */}
+              {/* STATUS & META */}
               <section className="detail-meta-grid">
                 <div className="detail-meta-card">
                   <span>
                     Current status
                   </span>
 
-                  <strong
-                    className={
-                      `status-badge status-${job.status}`
-                    }
-                  >
-                    {
-                      getStatusLabel(
-                        job.status
-                      )
-                    }
-                  </strong>
+                  <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                    <select
+                      value={job.status}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                      disabled={updating}
+                      className={`status-badge status-${job.status}`}
+                      style={{
+                        cursor: "pointer",
+                        appearance: "none",
+                        paddingRight: "22px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "12px",
+                        fontWeight: 650,
+                        outline: "none",
+                      }}
+                    >
+                      {STATUS_OPTIONS.map((opt) => (
+                        <option
+                          key={opt.value}
+                          value={opt.value}
+                          style={{ background: "#181222", color: "#fff" }}
+                        >
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    {updating ? (
+                      <Loader2 size={12} className="spin" style={{ position: "absolute", right: "4px" }} />
+                    ) : (
+                      <ChevronDown size={13} style={{ position: "absolute", right: "4px", pointerEvents: "none", opacity: 0.8 }} />
+                    )}
+                  </div>
                 </div>
 
                 <div className="detail-meta-card">
@@ -203,55 +275,58 @@ export default function DetailPanel({
                 <div className="detail-info-list">
                   <div className="detail-info-row">
                     <Building2 size={17} />
-
                     <div>
-                      <span>
-                        Company
-                      </span>
-
-                      <strong>
-                        {job.company_name}
-                      </strong>
+                      <span>Company</span>
+                      <strong>{job.company_name}</strong>
                     </div>
                   </div>
 
                   <div className="detail-info-row">
                     <Calendar size={17} />
-
                     <div>
-                      <span>
-                        Last activity
-                      </span>
-
+                      <span>Last activity</span>
                       <strong>
-                        {
-                          formatDate(
-                            job.last_email_at
-                          )
-                        }
+                        {formatDate(job.last_email_at || job.updated_at)}
                       </strong>
                     </div>
                   </div>
 
-                  {
-                    job.location && (
-                      <div className="detail-info-row">
-                        <MapPin size={17} />
-
-                        <div>
-                          <span>
-                            Location
-                          </span>
-
-                          <strong>
-                            {job.location}
-                          </strong>
-                        </div>
+                  {job.interview_link && (
+                    <div className="detail-info-row" style={{ alignItems: "flex-start" }}>
+                      <Calendar size={17} style={{ color: "#8b5cf6" }} />
+                      <div>
+                        <span>Interview Link</span>
+                        <a
+                          href={job.interview_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: "#c084fc",
+                            textDecoration: "underline",
+                            wordBreak: "break-all",
+                            fontSize: "13px",
+                            display: "inline-block",
+                            marginTop: "3px",
+                          }}
+                        >
+                          Join Video Call / Interview ↗
+                        </a>
                       </div>
-                    )
-                  }
+                    </div>
+                  )}
+
+                  {job.location_text && (
+                    <div className="detail-info-row">
+                      <MapPin size={17} />
+                      <div>
+                        <span>Location</span>
+                        <strong>{job.location_text}</strong>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
+
 
               {/* JOURNEY */}
               <section className="detail-section">
@@ -261,6 +336,8 @@ export default function DetailPanel({
 
                 <ApplicationJourney
                   status={job.status}
+                  onSelectStatus={handleStatusChange}
+                  updating={updating}
                 />
               </section>
             </div>
@@ -273,6 +350,8 @@ export default function DetailPanel({
 
 function ApplicationJourney({
   status,
+  onSelectStatus,
+  updating,
 }) {
   const steps = [
     {
@@ -310,18 +389,31 @@ function ApplicationJourney({
             index
           ) => {
             const completed =
-              index <= activeIndex;
+              index <= activeIndex && status !== "rejected";
+
+            const isCurrent = step.id === status;
 
             return (
-              <div
+              <button
+                type="button"
                 className={
                   `application-journey-step ${
                     completed
                       ? "completed"
                       : ""
-                  }`
+                  } ${isCurrent ? "current" : ""}`
                 }
                 key={step.id}
+                onClick={() => onSelectStatus?.(step.id)}
+                disabled={updating}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  padding: "4px 0",
+                  font: "inherit",
+                }}
               >
                 <div className="journey-marker">
                   {
@@ -331,14 +423,35 @@ function ApplicationJourney({
                   }
                 </div>
 
-                <span>
+                <span style={{ fontWeight: isCurrent ? 700 : 500 }}>
                   {step.label}
+                  {isCurrent && " (Current)"}
                 </span>
-              </div>
+              </button>
             );
           }
         )
       }
+
+      {status === "rejected" && (
+        <div
+          className="application-journey-step"
+          style={{ padding: "4px 0", opacity: 0.9 }}
+        >
+          <div
+            className="journey-marker"
+            style={{
+              borderColor: "var(--status-rejected, #A65A5A)",
+              color: "var(--status-rejected, #A65A5A)",
+            }}
+          >
+            ✕
+          </div>
+          <span style={{ color: "#d17b86", fontWeight: 650 }}>
+            Application Closed / Rejected
+          </span>
+        </div>
+      )}
     </div>
   );
 }

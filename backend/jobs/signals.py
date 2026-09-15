@@ -8,19 +8,10 @@ from .gmail_import_service import (
 )
 
 
-@receiver(
-    post_save,
-    sender=GmailJobEmail,
-)
-def import_new_gmail_candidate(
-    sender,
-    instance,
-    created,
-    **kwargs,
-):
+@receiver(post_save, sender=GmailJobEmail)
+def import_new_gmail_candidate(sender, instance, created, **kwargs):
     if not created:
         return
-
-    GmailJobApplicationImporter.import_candidate(
-        instance
-    )
+    if getattr(instance, "job_application_id", None):
+        return
+    GmailJobApplicationImporter.import_candidate(instance)

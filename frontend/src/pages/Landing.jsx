@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 
 import api from "../utils/api";
+import { getGmailConnectionStatus } from "../services/gmail";
 
 
 function GoogleIcon() {
@@ -156,15 +157,20 @@ export default function Landing() {
 
 
         /*
-         * Google authentication is complete.
-         *
-         * Gmail authorization is separate.
-         *
-         * ALWAYS continue through Permission.
-         * Permission.jsx checks /gmail/status/
-         * and decides whether to show Connect Gmail
-         * or continue to the dashboard.
+         * Check whether Gmail is already connected and synced.
+         * If so, navigate directly to dashboard, avoiding any
+         * intermediate loading flash.
          */
+        try {
+          const status = await getGmailConnectionStatus();
+          if (status?.connected) {
+            navigate("/dashboard", { replace: true });
+            return;
+          }
+        } catch (_) {
+          // Fall back to permission page on status check error
+        }
+
         navigate(
           "/permission",
           {

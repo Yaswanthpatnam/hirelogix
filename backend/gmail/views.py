@@ -1,6 +1,6 @@
 import hashlib
 import secrets
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
@@ -170,19 +170,40 @@ class GmailOAuthCallbackAPI(APIView):
                 .select_for_update()
                 .filter(
                     state_hash=state_hash,
-                    used=False,
-                    expires_at__gt=timezone.now(),
                 )
                 .first()
             )
 
             if not oauth_transaction:
-
                 print(
                     "INVALID GMAIL OAUTH STATE:",
                     state_hash,
                 )
+                return HttpResponseRedirect(
+                    (
+                        f"{settings.FRONTEND_URL}"
+                        "/permission"
+                        "?gmail_error=expired"
+                    )
+                )
 
+            # A successful Google callback can be requested again by the
+            # browser/Google flow. The state is one-time-use, but a replay
+            # of an already successful state must remain harmless.
+            if oauth_transaction.used:
+                print(
+                    "REPLAYED GMAIL OAUTH STATE:",
+                    state_hash,
+                )
+                return HttpResponseRedirect(
+                    f"{settings.FRONTEND_URL}/permission"
+                )
+
+            if oauth_transaction.expires_at <= timezone.now():
+                print(
+                    "EXPIRED GMAIL OAUTH STATE:",
+                    state_hash,
+                )
                 return HttpResponseRedirect(
                     (
                         f"{settings.FRONTEND_URL}"
@@ -366,7 +387,7 @@ class GmailOAuthCallbackAPI(APIView):
         return HttpResponseRedirect(
             (
                 f"{settings.FRONTEND_URL}"
-                "/dashboard"
+                "/permission"
             )
         )
 
@@ -701,68 +722,9 @@ class GmailHistoricalSyncAPI(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        submitted_date = (
-            request.data.get(
-                "job_search_started_on"
-            )
-        )
-
-        if submitted_date:
-
-            try:
-
-                parsed_start_date = (
-                    date.fromisoformat(
-                        submitted_date
-                    )
-                )
-
-            except ValueError:
-
-                return Response(
-                    {
-                        "error":
-                            "job_search_started_on "
-                            "must use YYYY-MM-DD format."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            if (
-                parsed_start_date
-                > timezone.localdate()
-            ):
-
-                return Response(
-                    {
-                        "error":
-                            "job_search_started_on "
-                            "cannot be in the future."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            connection.job_search_started_on = (
-                parsed_start_date
-            )
-
-            connection.save(
-                update_fields=[
-                    "job_search_started_on"
-                ]
-            )
-
-        if not connection.job_search_started_on:
-
-            return Response(
-                {
-                    "error":
-                        "Provide job_search_started_on "
-                        "before the first Gmail sync."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
+        # The first historical scan does not require a user-selected date.
+        # It starts from the connected Gmail account and searches only for
+        # job-related messages.
         try:
 
             sync_result = (
@@ -776,13 +738,7 @@ class GmailHistoricalSyncAPI(APIView):
                 {
                     "message":
                         "Historical Gmail job-email "
-                        "sync completed successfully.",
-
-                    "job_search_started_on":
-                        str(
-                            connection
-                            .job_search_started_on
-                        ),
+                        "sync page completed successfully.",
 
                     **sync_result,
                 },
@@ -804,3 +760,4 @@ class GmailHistoricalSyncAPI(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+

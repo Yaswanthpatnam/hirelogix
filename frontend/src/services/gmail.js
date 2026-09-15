@@ -2,54 +2,54 @@ import api from "../utils/api";
 
 
 /*
- * Check whether the current HireLogix user
- * already has an active Gmail connection.
+ * Return the current user's Gmail connection state.
  */
 export async function getGmailConnectionStatus() {
-
   const response =
     await api.get(
       "/gmail/status/"
     );
 
-
   return response.data;
-
 }
 
 
 /*
- * Start the Gmail OAuth flow.
- *
- * Django creates the Google authorization URL.
- * The browser redirect itself is handled by
- * Permission.jsx.
+ * Start the separate Gmail authorization flow.
  */
 export async function startGmailAuthorization() {
-
   const response =
     await api.get(
       "/gmail/auth/start/"
     );
 
-
   return response.data;
-
 }
 
 
 /*
- * Check Gmail for messages added since the
- * previous Gmail History API checkpoint.
+ * Start/continue the first historical Gmail scan.
+ *
+ * The backend determines the search scope. No date is required.
+ */
+export async function syncHistoricalGmail() {
+  const response =
+    await api.post(
+      "/gmail/sync/historical/"
+    );
+
+  return response.data;
+}
+
+
+/*
+ * Check Gmail for changes since the stored History API checkpoint.
  */
 export async function syncIncrementalGmail() {
-
   const response =
     await api.post(
       "/gmail/sync/incremental/"
     );
 
-
   return response.data;
-
 }

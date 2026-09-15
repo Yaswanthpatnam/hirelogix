@@ -101,6 +101,7 @@ function formatDate(
 export default function Overview({
   summary,
   jobs,
+  isSyncing,
   user,
   onSelect,
   onApplications,
@@ -343,10 +344,25 @@ export default function Overview({
 
       </header>
 
-
-      {/* =====================================================
-          STATISTICS
-      ====================================================== */}
+      {isSyncing && (
+        <div style={{
+          background: "rgba(135, 59, 191, 0.12)",
+          border: "1px solid rgba(135, 59, 191, 0.3)",
+          borderRadius: "14px",
+          padding: "14px 20px",
+          marginBottom: "24px",
+          display: "flex",
+          alignItems: "center",
+          gap: "14px",
+          color: "var(--brand-light, #e0c8ff)",
+          fontSize: "14px"
+        }}>
+          <Sparkles size={20} className="permission-spin" />
+          <span>
+            <strong>Gemini is analyzing your mailbox...</strong> Verified applications and status updates are being imported and will appear below in real-time.
+          </span>
+        </div>
+      )}
 
       <div className="stats-grid">
 

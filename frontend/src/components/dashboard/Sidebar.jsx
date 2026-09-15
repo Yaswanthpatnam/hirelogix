@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   BriefcaseBusiness,
   Clock3,
@@ -13,6 +12,8 @@ import {
   getInitials,
   getUserDisplayName,
 } from "../../utils/dashboardHelpers";
+
+import { logoutUser } from "../../services/user";
 
 
 const navItems = [
@@ -51,80 +52,9 @@ export default function Sidebar({
     "Signed in";
 
 
-  const logout = async () => {
-
-  const accessToken =
-    localStorage.getItem(
-      "access"
-    );
-
-  const refreshToken =
-    localStorage.getItem(
-      "refresh"
-    );
-
-  try {
-
-    if (accessToken && refreshToken) {
-
-      await axios.post(
-
-        `${
-          import.meta.env.VITE_API_BASE_URL ||
-          "http://localhost:8000"
-        }/user/auth/logout/`,
-
-        {
-          refresh:
-            refreshToken,
-        },
-
-        {
-          headers: {
-            "Content-Type":
-              "application/json",
-
-            Authorization:
-              `Bearer ${accessToken}`,
-          },
-        }
-
-      );
-
-    }
-
-  } catch (error) {
-
-    console.error(
-      "Logout request failed:",
-      error
-    );
-
-  } finally {
-
-    localStorage.removeItem(
-      "access"
-    );
-
-    localStorage.removeItem(
-      "refresh"
-    );
-
-    localStorage.removeItem(
-      "user"
-    );
-
-    localStorage.removeItem(
-      "is_new_user"
-    );
-
-    window.location.assign(
-      "/"
-    );
-
-  }
-
-};
+  const logout = () => {
+    logoutUser();
+  };
   return (
     <aside className="sidebar">
 

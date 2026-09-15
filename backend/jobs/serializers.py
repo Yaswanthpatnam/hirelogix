@@ -1,6 +1,21 @@
 from rest_framework import serializers
-
+from gmail.models import GmailJobEmail
 from .models import JobApplication
+
+
+class JobEmailTimelineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GmailJobEmail
+        fields = [
+            "id",
+            "message_id",
+            "thread_id",
+            "sender",
+            "subject",
+            "snippet",
+            "email_date",
+            "created_at",
+        ]
 
 
 class JobApplicationSerializer(serializers.ModelSerializer):
@@ -14,6 +29,12 @@ class JobApplicationSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    emails = JobEmailTimelineSerializer(
+        source="job_emails",
+        many=True,
+        read_only=True,
+    )
+
     class Meta:
         model = JobApplication
         fields = [
@@ -24,6 +45,12 @@ class JobApplicationSerializer(serializers.ModelSerializer):
             "status_display",
             "source",
             "source_display",
+            "interview_date",
+            "interview_link",
+            "salary_text",
+            "location_text",
+            "thread_ids",
+            "emails",
             "last_email_at",
             "created_at",
             "updated_at",
@@ -32,7 +59,9 @@ class JobApplicationSerializer(serializers.ModelSerializer):
             "id",
             "source",
             "source_display",
+            "thread_ids",
+            "emails",
             "last_email_at",
             "created_at",
             "updated_at",
-        ]
+        ]

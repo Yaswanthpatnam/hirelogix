@@ -29,9 +29,6 @@ import TimelineView from
 import InsightsView from
   "../components/views/InsightsView";
 
-import EmptyDashboard from
-  "../components/views/EmptyDashboard";
-
 import useDashboardData from
   "../hooks/useDashboardData";
 
@@ -112,8 +109,10 @@ export default function Dashboard() {
     summary,
     jobs,
     loading,
+    isSyncing,
     error,
     refresh,
+    updateLocalJob,
   } =
     useDashboardData();
 
@@ -480,25 +479,6 @@ export default function Dashboard() {
 
         default:
 
-          if (
-            !hasApplications
-          ) {
-
-            return (
-
-              <EmptyDashboard
-                onApplications={
-                  navigateTo(
-                    "Applications"
-                  )
-                }
-              />
-
-            );
-
-          }
-
-
           return (
 
             <Overview
@@ -507,6 +487,9 @@ export default function Dashboard() {
               }
               jobs={
                 safeJobs
+              }
+              isSyncing={
+                isSyncing
               }
               user={
                 user
@@ -585,6 +568,9 @@ export default function Dashboard() {
           hasApplications={
             hasApplications
           }
+          isSyncing={
+            isSyncing
+          }
           onMenu={
             () =>
               setMobileOpen(
@@ -623,6 +609,9 @@ export default function Dashboard() {
                   null
                 )
             }
+            onJobUpdated={
+              updateLocalJob
+            }
           />
 
         )
@@ -633,3 +622,5 @@ export default function Dashboard() {
   );
 
 }
+
+

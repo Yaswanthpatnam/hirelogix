@@ -120,12 +120,21 @@ class GmailJobEmail(models.Model):
         related_name="job_emails",
     )
 
+    job_application = models.ForeignKey(
+        "jobs.JobApplication",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="job_emails",
+    )
+
     message_id = models.CharField(
         max_length=255,
     )
 
     thread_id = models.CharField(
         max_length=255,
+        db_index=True,
     )
 
     sender = models.TextField(
@@ -134,6 +143,16 @@ class GmailJobEmail(models.Model):
 
     subject = models.TextField(
         blank=True,
+    )
+
+    snippet = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    body_text = models.TextField(
+        blank=True,
+        default="",
     )
 
     email_date = models.TextField(
@@ -147,6 +166,7 @@ class GmailJobEmail(models.Model):
 
     created_at = models.DateTimeField(
         auto_now_add=True,
+        db_index=True,
     )
 
     class Meta:

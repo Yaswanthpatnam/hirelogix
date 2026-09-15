@@ -61,3 +61,31 @@ export async function getJobById(
   return response.data;
 
 }
+
+
+export async function updateJobApplication(
+  jobId,
+  data
+) {
+
+  const response = await api.patch(
+    `/jobs/${jobId}/`,
+    data
+  );
+
+  return response.data;
+
+}
+
+
+export async function deleteJobApplication(
+  jobId
+) {
+
+  const response = await api.delete(
+    `/jobs/${jobId}/`
+  );
+
+  return response.data;
+
+}

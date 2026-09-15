@@ -30,7 +30,7 @@ function HomeRoute() {
 
     return (
       <Navigate
-        to="/permission"
+        to="/dashboard"
         replace
       />
     );

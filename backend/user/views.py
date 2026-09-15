@@ -257,7 +257,7 @@ class ProfileAPI(APIView):
 class LogoutAPI(APIView):
 
     permission_classes = [
-        IsAuthenticated
+        AllowAny
     ]
 
     def post(
@@ -269,6 +269,11 @@ class LogoutAPI(APIView):
             "refresh"
         )
 
+        target_user = (
+            request.user
+            if request.user and request.user.is_authenticated
+            else None
+        )
 
         if refresh_token:
 
@@ -278,59 +283,72 @@ class LogoutAPI(APIView):
                     refresh_token
                 )
 
+                if not target_user:
+                    user_id = token.payload.get(
+                        "user_id"
+                    )
+                    if user_id:
+                        target_user = (
+                            User.objects.filter(
+                                id=user_id
+                            ).first()
+                        )
+
                 token.blacklist()
 
-            except Exception:
+            except Exception as exc:
 
-                pass
-
+                print("TOKEN BLACKLIST ERROR:", exc)
 
         # Clear the user's Gmail authorization
-        # when they explicitly log out.
+        # when they explicitly log out so they can log in fresh.
+        if target_user:
 
-        try:
+            try:
 
-            connection = (
-                GmailConnection.objects
-                .filter(
-                    user=request.user
-                )
-                .first()
-            )
-
-
-            if connection:
-
-                connection.access_token = ""
-
-                connection.refresh_token = None
-
-                connection.token_expires_at = None
-
-                connection.is_active = False
-
-                connection.save(
-                    update_fields=[
-                        "access_token",
-                        "refresh_token",
-                        "token_expires_at",
-                        "is_active",
-                        "updated_at",
-                    ]
+                connection = (
+                    GmailConnection.objects
+                    .filter(
+                        user=target_user
+                    )
+                    .first()
                 )
 
+                if connection:
 
-        except Exception as exc:
+                    connection.access_token = ""
+                    connection.refresh_token = None
+                    connection.token_expires_at = None
+                    connection.is_active = False
+                    connection.historical_sync_completed = False
+                    connection.last_history_id = None
+                    connection.historical_next_page_token = None
+                    connection.incremental_next_page_token = None
+                    connection.pending_history_id = None
 
-            print(
-                "GMAIL LOGOUT CLEANUP ERROR:",
-                repr(exc)
-            )
+                    connection.save(
+                        update_fields=[
+                            "access_token",
+                            "refresh_token",
+                            "token_expires_at",
+                            "is_active",
+                            "historical_sync_completed",
+                            "last_history_id",
+                            "historical_next_page_token",
+                            "incremental_next_page_token",
+                            "pending_history_id",
+                            "updated_at",
+                        ]
+                    )
 
+            except Exception as exc:
+
+                print(
+                    "GMAIL LOGOUT CLEANUP ERROR:",
+                    repr(exc)
+                )
 
         return Response({
-
             "message":
                 "Logged out successfully."
-
         })

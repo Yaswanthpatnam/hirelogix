@@ -67,6 +67,7 @@ class JobApplication(models.Model):
         max_length=30,
         choices=Status.choices,
         default=Status.APPLIED,
+        db_index=True,
     )
 
     source = models.CharField(
@@ -79,6 +80,48 @@ class JobApplication(models.Model):
         max_length=255,
         blank=True,
         null=True,
+        db_index=True,
+    )
+
+    thread_ids = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
+    normalized_company = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        db_index=True,
+    )
+
+    normalized_role = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        db_index=True,
+    )
+
+    interview_date = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    interview_link = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    salary_text = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    location_text = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
     )
 
     last_gmail_message_id = models.CharField(
@@ -89,30 +132,20 @@ class JobApplication(models.Model):
     last_email_at = models.DateTimeField(
         blank=True,
         null=True,
+        db_index=True,
     )
 
     created_at = models.DateTimeField(
         auto_now_add=True,
+        db_index=True,
     )
 
     updated_at = models.DateTimeField(
         auto_now=True,
+        db_index=True,
     )
 
     class Meta:
-
-        constraints = [
-            models.UniqueConstraint(
-                fields=[
-                    "user",
-                    "gmail_thread_id",
-                ],
-                name=(
-                    "unique_gmail_thread_per_user"
-                ),
-            )
-        ]
-
         ordering = [
             "-last_email_at",
             "-updated_at",

@@ -1,4 +1,6 @@
 import base64
+import html
+import re
 
 
 class GmailMessageParser:
@@ -7,7 +9,6 @@ class GmailMessageParser:
     def get_headers(
         message,
     ):
-
         payload = message.get(
             "payload",
             {}
@@ -21,7 +22,6 @@ class GmailMessageParser:
         header_data = {}
 
         for header in headers:
-
             name = header.get(
                 "name",
                 ""
@@ -38,131 +38,109 @@ class GmailMessageParser:
             "from": header_data.get(
                 "from"
             ),
-
             "subject": header_data.get(
                 "subject"
             ),
-
             "date": header_data.get(
                 "date"
             ),
+            "to": header_data.get(
+                "to"
+            ),
         }
-
 
     @staticmethod
     def decode_body_data(
         data,
     ):
-
         if not data:
-
             return ""
 
-        decoded_bytes = (
-            base64.urlsafe_b64decode(
-                data
-            )
-        )
-
-        return decoded_bytes.decode(
-            "utf-8",
-            errors="replace",
-        )
-
-
-    @classmethod
-    def find_body_part(
-        cls,
-        part,
-    ):
-
-        mime_type = part.get(
-            "mimeType",
-            ""
-        )
-
-        body = part.get(
-            "body",
-            {}
-        )
-
-        data = body.get(
-            "data"
-        )
-
-        if (
-            mime_type in (
-                "text/plain",
-                "text/html",
-            )
-            and data
-        ):
-
-            return {
-                "mime_type":
-                    mime_type,
-
-                "data":
-                    data,
-            }
-
-        parts = part.get(
-            "parts",
-            []
-        )
-
-        for nested_part in parts:
-
-            result = (
-                cls.find_body_part(
-                    nested_part
+        try:
+            decoded_bytes = (
+                base64.urlsafe_b64decode(
+                    data.encode("ASCII") if isinstance(data, str) else data
                 )
             )
-
-            if result:
-
-                return result
-
-        return None
-
+            return decoded_bytes.decode(
+                "utf-8",
+                errors="replace",
+            )
+        except Exception:
+            return ""
 
     @classmethod
-    def get_body(
-        cls,
-        message,
-    ):
+    def strip_html_tags(cls, html_content):
+        if not html_content:
+            return ""
 
-        payload = message.get(
-            "payload",
-            {}
+        # Remove scripts and styles
+        cleaned = re.sub(
+            r"<(script|style).*?>.*?</\1>",
+            "",
+            html_content,
+            flags=re.DOTALL | re.IGNORECASE,
         )
+        # Convert break lines and paragraphs to newlines
+        cleaned = re.sub(r"<(br|p|div|tr)[\s/>]", "\n", cleaned, flags=re.IGNORECASE)
+        # Strip all other HTML tags
+        cleaned = re.sub(r"<[^>]+>", " ", cleaned)
+        # Unescape HTML entities (&amp;, &nbsp;, etc.)
+        cleaned = html.unescape(cleaned)
+        # Normalize whitespace
+        cleaned = re.sub(r"[ \t]+", " ", cleaned)
+        cleaned = re.sub(r"\n\s*\n+", "\n\n", cleaned)
+        return cleaned.strip()
 
-        body_part = (
-            cls.find_body_part(
-                payload
-            )
-        )
+    @classmethod
+    def extract_body_parts(cls, payload):
+        """Recursively collect plain text and html body parts."""
+        plain_texts = []
+        html_texts = []
 
-        if not body_part:
+        def _traverse(part):
+            mime_type = part.get("mimeType", "").lower()
+            body = part.get("body", {})
+            data = body.get("data")
 
-            return {
-                "mime_type":
-                    None,
+            if data:
+                decoded = cls.decode_body_data(data)
+                if decoded:
+                    if mime_type == "text/plain":
+                        plain_texts.append(decoded)
+                    elif mime_type == "text/html":
+                        html_texts.append(decoded)
 
-                "content":
-                    "",
-            }
+            for subpart in part.get("parts", []):
+                _traverse(subpart)
 
-        decoded_content = (
-            cls.decode_body_data(
-                body_part["data"]
-            )
-        )
+        _traverse(payload)
+        return plain_texts, html_texts
 
-        return {
-            "mime_type":
-                body_part["mime_type"],
+    @classmethod
+    def get_clean_body_text(cls, message):
+        """Returns clean plain text of the email body."""
+        payload = message.get("payload", {})
+        plain_texts, html_texts = cls.extract_body_parts(payload)
 
-            "content":
-                decoded_content,
-        }
+        if plain_texts:
+            full_text = "\n".join(plain_texts)
+            return re.sub(r"\s+", " ", full_text).strip()
+
+        if html_texts:
+            full_html = "\n".join(html_texts)
+            stripped = cls.strip_html_tags(full_html)
+            return re.sub(r"\s+", " ", stripped).strip()
+
+        snippet = message.get("snippet", "")
+        if snippet:
+            return html.unescape(snippet).strip()
+
+        return ""
+
+    @classmethod
+    def get_snippet(cls, message):
+        raw_snippet = message.get("snippet", "")
+        if not raw_snippet:
+            return ""
+        return html.unescape(raw_snippet).strip()

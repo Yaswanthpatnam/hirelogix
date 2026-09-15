@@ -10,3 +10,5 @@ whitenoise
 requests
 google-auth
 gunicorn
+google-genai
+pydantic

@@ -9,6 +9,7 @@ import {
 export default function Topbar({
   activeNav,
   hasApplications,
+  isSyncing,
   onMenu,
   onSync,
   syncText,
@@ -48,7 +49,9 @@ export default function Topbar({
 
           <span
             className={
-              hasApplications
+              isSyncing
+                ? "status-live permission-spin"
+                : hasApplications
                 ? "status-live"
                 : "status-off"
             }
@@ -56,7 +59,9 @@ export default function Topbar({
 
           <span>
             {
-              hasApplications
+              isSyncing
+                ? "Syncing with Gemini..."
+                : hasApplications
                 ? "Job data loaded"
                 : "No applications"
             }
@@ -68,11 +73,12 @@ export default function Topbar({
         <button
           className="sync-button"
           onClick={onSync}
+          disabled={isSyncing}
         >
 
-          <Zap size={13} />
+          <Zap size={13} className={isSyncing ? "permission-spin" : ""} />
 
-          {syncText}
+          {isSyncing ? "Syncing..." : syncText}
 
         </button>
 

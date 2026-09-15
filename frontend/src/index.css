@@ -497,28 +497,20 @@ button:focus-visible {
 .google-login-wrapper {
   position: relative;
   width: 100%;
-  height: 55px;
-  min-height: 55px;
   display: flex;
   align-items: center;
-  overflow: hidden;
+  justify-content: center;
+  min-height: 44px;
 }
 
 .google-login-wrapper > div {
   width: 100% !important;
-  height: 55px !important;
-  min-height: 55px;
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  justify-content: center !important;
 }
 
 .google-login-wrapper iframe {
-  display: block !important;
-  width: 100% !important;
-  height: 55px !important;
-  min-height: 55px !important;
-  max-width: 100% !important;
-  border: 0 !important;
+  color-scheme: light !important;
 }
 
 .google-loading-overlay {
