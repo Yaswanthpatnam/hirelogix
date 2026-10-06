@@ -10,8 +10,8 @@ from .oauth_service import GmailOAuthService
 
 
 class GmailSyncService:
-    PAGE_SIZE = 25
-    MAX_METADATA_WORKERS = 8
+    PAGE_SIZE = 12
+    MAX_METADATA_WORKERS = 6
 
     JOB_SEARCH_TERMS = [
         "application",
@@ -31,6 +31,12 @@ class GmailSyncService:
         "workday",
         "ashby",
         "smartrecruiters",
+        "jobvite",
+        "icims",
+        "taleo",
+        "bamboohr",
+        "rippling",
+        "myworkdayjobs",
     ]
 
     METADATA_HEADERS = [
@@ -42,11 +48,17 @@ class GmailSyncService:
 
     @classmethod
     def build_job_search_query(cls, job_search_started_on=None):
+        """
+        Builds an optimized Gmail search query.
+        Excludes social notifications, but intentionally includes promotional tab
+        because Gmail often miscategorizes transactional job application confirmations into Promotions.
+        Tier-1 Regex Gatekeeper on the backend accurately filters out true spam/promotions in sub-millisecond time.
+        """
         keyword_query = " OR ".join(cls.JOB_SEARCH_TERMS)
         date_filter = ""
         if job_search_started_on:
             date_filter = f" after:{job_search_started_on.strftime('%Y/%m/%d')}"
-        return f"-category:promotions -category:social {{{keyword_query}}}{date_filter}"
+        return f"-category:social {{{keyword_query}}}{date_filter}"
 
     @classmethod
     def get_matched_header_keywords(cls, sender, subject):

@@ -43,10 +43,10 @@ class GmailJobApplicationImporter:
         "internshala", "foundit", "monsterindia", "unstop", "dare2compete", "jobleads",
         "naukri", "timesjobs", "shine.com", "freshersworld", "hirist", "apna.co",
         "glassdoor", "ziprecruiter",
-        # Banking, financial & shopping promotional spam
-        "hdfc", "icici", "sbi", "axis bank", "kotak", "citibank", "bank",
-        "salary account", "credit card", "debit card", "personal loan", "home loan",
-        "fixed deposit", "insurance", "cashback", "coupon", "discount",
+        # Financial promotional spam (Avoid generic 'bank' so real banks like Deutsche Bank aren't blocked)
+        "hdfc bank alert", "icici bank alert", "sbi card", "axis bank offer", "kotak credit card",
+        "salary account offer", "credit card offer", "pre-approved loan", "personal loan offer", "home loan offer",
+        "fixed deposit scheme", "insurance policy offer", "cashback offer", "coupon code", "discount voucher",
         "special offer", "special offers", "exclusive offer", "limited time offer",
         # Common promotional digest & recommendation subject cues
         "job alert", "jobs for you", "recommendations for you", "matching your profile",
@@ -217,9 +217,9 @@ class GmailJobApplicationImporter:
             return None, False
 
         role_title = (gemini_data.get("role_title") or "").strip()
-        # Sanitize role_title: Must be a job title, NEVER email body text, greetings, or sentences
+        # Sanitize role_title: Must be a job title, NEVER email body sentences, greetings, or paragraphs
         if role_title:
-            if len(role_title.split()) > 6 or any(char in role_title for char in [".", "!", "?", ";", ":", "\n"]):
+            if len(role_title.split()) > 8 or "\n" in role_title or any(char in role_title for char in ["!", "?", ";"]):
                 role_title = ""
 
         status = (gemini_data.get("status") or "").lower().strip()

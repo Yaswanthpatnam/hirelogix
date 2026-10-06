@@ -35,66 +35,13 @@ class GmailIncrementalSyncAPI(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if not connection.historical_sync_completed:
-            return Response(
-                {
-                    "error":
-                        "Complete the historical Gmail sync "
-                        "before incremental syncing."
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-
         try:
-
+            # Auto-initialize History API checkpoint if not yet set
             if not connection.last_history_id:
+                GmailSyncService.initialize_history_checkpoint(connection)
 
-                history_id = (
-                    GmailSyncService
-                    .initialize_history_checkpoint(
-                        connection
-                    )
-                )
-
-                return Response(
-                    {
-                        "message":
-                            "Gmail change tracking has been "
-                            "initialized. Future syncs will "
-                            "check only new emails.",
-
-                        "history_id_initialized":
-                            history_id,
-
-                        "new_message_count":
-                            0,
-
-                        "created_count":
-                            0,
-
-                        "existing_count":
-                            0,
-
-                        "ignored_count":
-                            0,
-
-                        "has_more":
-                            False,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-
-            sync_result = (
-                GmailSyncService
-                .sync_incremental_job_emails(
-                    connection
-                )
-            )
-
-            return Response(
-                sync_result,
-                status=status.HTTP_200_OK,
-            )
+            sync_result = GmailSyncService.sync_incremental_job_emails(connection)
+            return Response(sync_result, status=status.HTTP_200_OK)
 
         except ValueError as exc:
 

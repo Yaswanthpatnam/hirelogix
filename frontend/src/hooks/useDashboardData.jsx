@@ -122,34 +122,27 @@ export default function useDashboardData() {
           setJobs(normJobs);
           setLoading(false);
 
-          // If historical sync is not yet complete, finish remaining pages in background
+          // If historical sync is not yet complete, trigger a background pass
           try {
             const gmailStatus = await getGmailConnectionStatus();
-            if (gmailStatus?.connected && !gmailStatus?.historical_sync_completed) {
-              (async () => {
-                try {
-                  setIsSyncing(true);
-                  let hasMore = true;
-                  let loops = 0;
-                  while (hasMore && loops < 5) {
-                    const syncRes = await syncHistoricalGmail();
-                    hasMore = Boolean(syncRes?.has_more);
-                    loops++;
-
-                    // Progressive update as applications are parsed
-                    const [midSummary, midJobs] = await Promise.all([
-                      getJobSummary(),
-                      getJobs({ page: 1 }),
-                    ]);
-                    setSummary(normalizeSummary(midSummary));
-                    setJobs(normalizeJobs(midJobs));
-                  }
-                } catch (_) {
-                  // Ignore background sync errors
-                } finally {
-                  setIsSyncing(false);
-                }
-              })();
+            if (gmailStatus?.connected) {
+              if (!gmailStatus?.historical_sync_completed) {
+                // Background single pass to make progress without blocking UI
+                syncHistoricalGmail().then(() => {
+                  Promise.all([getJobSummary(), getJobs({ page: 1 })]).then(([s, j]) => {
+                    setSummary(normalizeSummary(s));
+                    setJobs(normalizeJobs(j));
+                  });
+                }).catch(() => {});
+              } else {
+                // Quick incremental check in background
+                syncIncrementalGmail().then(() => {
+                  Promise.all([getJobSummary(), getJobs({ page: 1 })]).then(([s, j]) => {
+                    setSummary(normalizeSummary(s));
+                    setJobs(normalizeJobs(j));
+                  });
+                }).catch(() => {});
+              }
             }
           } catch (_) {
             // Ignore connection check error
@@ -191,13 +184,14 @@ export default function useDashboardData() {
 
           if (gmailStatus?.connected) {
             try {
-              if (!gmailStatus?.historical_sync_completed) {
-                await syncHistoricalGmail();
-              } else {
-                await syncIncrementalGmail();
-              }
+              // Always run sub-second incremental delta sync on refresh
+              await syncIncrementalGmail();
             } catch (syncErr) {
-              console.warn("Background sync warning during refresh:", syncErr);
+              console.warn("Incremental sync note during refresh:", syncErr);
+              // If incremental returned error (e.g. historical in progress), try single historical step
+              try {
+                await syncHistoricalGmail();
+              } catch (_) {}
             }
           }
 
