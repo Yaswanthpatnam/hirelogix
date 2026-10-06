@@ -251,25 +251,20 @@ SIMPLE_JWT = {
 # --------------------------------------------------
 
 CORS_ALLOWED_ORIGINS = [
-
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://hirelogix-ai.vercel.app/"
-
+    "https://hirelogix-ai.vercel.app",
 ]
 
-
-# Add deployed frontend through environment variable.
-FRONTEND_URL = os.getenv(
-    "FRONTEND_URL"
-)
-
+# Add deployed frontend through environment variable safely stripping any trailing slash
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 if FRONTEND_URL:
+    clean_frontend = FRONTEND_URL.rstrip("/")
+    if clean_frontend not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(clean_frontend)
 
-    CORS_ALLOWED_ORIGINS.append(
-        FRONTEND_URL
-    )
-
+# Ensure no origin in CORS_ALLOWED_ORIGINS has a trailing slash (fixes corsheaders.E014)
+CORS_ALLOWED_ORIGINS = [origin.rstrip("/") for origin in CORS_ALLOWED_ORIGINS]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -279,18 +274,17 @@ CORS_ALLOW_CREDENTIALS = True
 # --------------------------------------------------
 
 CSRF_TRUSTED_ORIGINS = [
-
     "http://localhost:5173",
-
     "http://127.0.0.1:5173",
+    "https://hirelogix-ai.vercel.app",
 ]
 
+if FRONTEND_URL:
+    clean_frontend = FRONTEND_URL.rstrip("/")
+    if clean_frontend.startswith("https://") and clean_frontend not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(clean_frontend)
 
-if FRONTEND_URL and FRONTEND_URL.startswith("https://"):
-
-    CSRF_TRUSTED_ORIGINS.append(
-        FRONTEND_URL
-    )
+CSRF_TRUSTED_ORIGINS = [origin.rstrip("/") for origin in CSRF_TRUSTED_ORIGINS]
 
 
 # --------------------------------------------------
