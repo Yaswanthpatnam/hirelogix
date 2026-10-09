@@ -25,6 +25,7 @@ class GmailJobApplicationImporter:
         "pinpointhq.com", "recruitee.com", "freshteam.com", "applicantlist.com",
         "breezy.hr", "workable.com", "jazzhr.com", "cornerstoneondemand.com",
         "successfactors.com", "applytojob.com", "teamtailor.com",
+        "kekamail.com", "keka.com", "darwinbox.in", "darwinbox.com",
     }
 
     GENERIC_PLATFORM_NAMES = {
@@ -33,6 +34,7 @@ class GmailJobApplicationImporter:
         "taleo", "myworkdayjobs", "company not identified", "careers",
         "recruiting", "talent acquisition", "hr team", "hiring team",
         "talent team", "no reply", "notifications", "support", "jobs",
+        "keka", "kekamail",
     }
 
     # --- TIER 1 PRIVACY GATEKEEPER: VERIFY 100% JOB RELEVANCE FROM HEADERS ---
@@ -60,11 +62,12 @@ class GmailJobApplicationImporter:
     ]
 
     JOB_HEADER_SENDER_KEYWORDS = [
-        "careers", "talent", "recruiting", "recruiter", "hiring",
+        "careers", "talent", "recruiting", "recruiter", "hiring", "hire@", "jobs@",
         "hr@", "hr.", "people@", "peopleteam", "interview", "assessment",
         "greenhouse", "lever", "workday", "smartrecruiters", "ashby",
         "hackerrank", "codility", "hirevue",
         "handshake", "rippling", "bamboohr", "otta", "hired",
+        "recruitment", "talentacquisition", "sf-connect",
     ]
 
     JOB_HEADER_SUBJECT_KEYWORDS = [
@@ -72,6 +75,7 @@ class GmailJobApplicationImporter:
         "interview", "assessment", "screening", "shortlisted",
         "job offer", "offer letter", "offer of employment", "official offer",
         "rejected", "unsuccessful", "status update", "next steps",
+        "video resume", "resume", "intern", "internship", "submission",
     ]
 
     @classmethod
@@ -197,8 +201,15 @@ class GmailJobApplicationImporter:
         candidate_datetime = cls.parse_email_datetime(candidate.email_date) or timezone.now()
 
         # Extract entities using Gemini with privacy guard
+        effective_sender = sender
+        user_email = getattr(user, "email", "")
+        conn_email = getattr(candidate.gmail_connection, "google_email", "")
+        if (user_email and user_email.lower() in sender.lower()) or (conn_email and conn_email.lower() in sender.lower()):
+            if "To:" in body:
+                effective_sender = f"{sender} | {body[:120]}"
+
         gemini_data = GeminiJobAnalyzer.analyze_candidate(
-            sender=sender,
+            sender=effective_sender,
             subject=subject,
             snippet=snippet,
             email_date=candidate.email_date,
