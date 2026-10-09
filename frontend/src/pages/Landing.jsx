@@ -241,7 +241,7 @@ export default function Landing() {
           <div>
 
             <div className="brand-name">
-              HireLogix
+              HireLogix.ai
             </div>
 
             <div className="brand-tagline">

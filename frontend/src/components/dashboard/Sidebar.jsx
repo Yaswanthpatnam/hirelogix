@@ -68,7 +68,7 @@ export default function Sidebar({
 
           <div>
             <strong>
-              HireLogix
+              HireLogix.ai
             </strong>
 
             <small>
