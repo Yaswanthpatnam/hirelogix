@@ -44,13 +44,13 @@ class GeminiJobAnalyzer:
     Includes built-in rate-pacing and dynamic 429 backoff to prevent quota exhaustion.
     """
 
-    MODEL_NAME = getattr(settings, "GEMINI_MODEL_NAME", "gemini-3.5-flash-lite")
-    FALLBACK_MODEL = "gemini-3.6-flash"
+    MODEL_NAME = getattr(settings, "GEMINI_MODEL_NAME", "gemini-3.8-flash")
+    FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash"]
 
     _client = None
     _pacing_lock = threading.Lock()
     _last_request_time = 0.0
-    REQUEST_INTERVAL = 1.5  # Fast, responsive pacing
+    REQUEST_INTERVAL = 1.0  # Ultra-fast, responsive pacing
 
     @classmethod
     def get_client(cls):
@@ -70,17 +70,64 @@ class GeminiJobAnalyzer:
             return None
 
     @classmethod
-    def _extract_retry_delay(cls, error_str: str) -> float:
-        """Parses Google API 429 retryDelay or retry in seconds."""
-        m = re.search(r"retryDelay['\"]?:\s*['\"]?(\d+)s?", error_str, re.IGNORECASE)
-        if m:
-            return float(m.group(1))
+    def _deterministic_fallback(cls, sender: str, subject: str, snippet: str = "") -> Dict[str, Any]:
+        """
+        Safety Net: Extracts company name and role using deterministic heuristics
+        if all Gemini AI models are ever unreachable, rate-limited, or retired.
+        Ensures zero applications are lost even during total AI outage.
+        """
+        clean_sender = (sender or "").strip()
+        clean_subject = (subject or "").strip()
 
-        m = re.search(r"retry in\s+([\d.]+)", error_str, re.IGNORECASE)
-        if m:
-            return float(m.group(1))
+        # Extract company from common subject cues: "Application to [Company]", "[Company] Application", etc.
+        company = ""
+        m_subj = re.search(r"(?:applying to|application for|at|with)\s+([A-Z][a-zA-Z0-9\s&]+?)(?:[!.,\-\–|]|\s+for|\s+the|\s+as|$)", clean_subject, re.IGNORECASE)
+        if m_subj:
+            candidate_comp = m_subj.group(1).strip()
+            if len(candidate_comp.split()) <= 4 and candidate_comp.lower() not in ["the job", "software engineer", "intern", "developer"]:
+                company = candidate_comp
 
-        return 2.0
+        if not company:
+            # Extract from sender display name: "Stripe Careers", "NIIT", "Google Recruiting"
+            m_sender = re.match(r"^[\"']?([A-Za-z0-9\s&]+?)(?:\s+(?:Careers|Recruiting|Team|Talent|Hiring|Jobs))?[\"']?\s*<", clean_sender)
+            if m_sender:
+                company = m_sender.group(1).strip()
+
+        if not company:
+            # Extract from domain: "careers@larsentoubro.com" -> Larsen Toubro
+            m_domain = re.search(r"@([a-zA-Z0-9.-]+)", clean_sender)
+            if m_domain:
+                domain_part = m_domain.group(1).split(".")[0]
+                if domain_part not in ["gmail", "yahoo", "outlook", "greenhouse", "lever", "workday", "ashby"]:
+                    company = domain_part.capitalize()
+
+        # Extract role
+        role = ""
+        for r_pattern in [r"(Software Engineer[^\s,.]*)", r"(Software Developer[^\s,.]*)", r"(Full Stack Developer[^\s,.]*)", r"(Frontend Developer[^\s,.]*)", r"(Backend Developer[^\s,.]*)", r"(Data Analyst[^\s,.]*)", r"(Intern[^\s,.]*)"]:
+            m_role = re.search(r_pattern, clean_subject, re.IGNORECASE)
+            if m_role:
+                role = m_role.group(1).strip()
+                break
+
+        status = "applied"
+        clean_subj_lower = clean_subject.lower()
+        if "interview" in clean_subj_lower:
+            status = "interview"
+        elif "assessment" in clean_subj_lower or "test" in clean_subj_lower or "hackerrank" in clean_subj_lower:
+            status = "assessment"
+        elif "offer" in clean_subj_lower:
+            status = "offer"
+        elif "reject" in clean_subj_lower or "unsuccessful" in clean_subj_lower:
+            status = "rejected"
+
+        return {
+            "is_job_application": True,
+            "is_promotional_digest": False,
+            "company_name": company or "Identified Employer",
+            "role_title": role,
+            "status": status,
+            "confidence": 0.7,
+        }
 
     @classmethod
     def analyze_candidate(
@@ -92,15 +139,15 @@ class GeminiJobAnalyzer:
     ) -> Optional[Dict[str, Any]]:
         """
         Analyzes a single job candidate email using Gemini structured output.
-        Applies rapid model failover and avoids long blocking pauses.
+        Cascades through models and falls back to deterministic extraction if all fail.
         """
         client = cls.get_client()
-        if not client:
-            return None
-
         clean_sender = (sender or "").strip()
         clean_subject = (subject or "").strip()
         clean_snippet = (snippet or "").strip()[:500]
+
+        if not client:
+            return cls._deterministic_fallback(clean_sender, clean_subject, clean_snippet)
 
         prompt = f"""
 Analyze the following email metadata to determine if it is an authentic job application submitted by the candidate or an application stage update.
@@ -128,7 +175,12 @@ CRITICAL RULES:
 
         from google.genai import types
 
-        models_to_try = [cls.MODEL_NAME, cls.FALLBACK_MODEL]
+        # Build dynamic ordered cascade without duplicates
+        configured_model = getattr(settings, "GEMINI_MODEL_NAME", cls.MODEL_NAME)
+        models_to_try = [configured_model]
+        for m in cls.FALLBACK_MODELS:
+            if m not in models_to_try:
+                models_to_try.append(m)
 
         for model_name in models_to_try:
             for attempt in range(2):
@@ -151,7 +203,7 @@ CRITICAL RULES:
                     )
 
                     if not response.text:
-                        return None
+                        continue
 
                     data = json.loads(response.text)
                     return data
@@ -162,19 +214,21 @@ CRITICAL RULES:
                     # Handle 429: Fast switch to next model without freezing
                     if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
                         logger.warning("Gemini 429 on %s, attempting fast failover...", model_name)
-                        time.sleep(1.0)
+                        time.sleep(0.5)
                         break
 
-                    # Handle 404 / 503: Try next model
+                    # Handle 404 / 503 / Not Found / Retired: Try next model
                     if "404" in err_str or "NOT_FOUND" in err_str or "503" in err_str:
                         logger.warning("Model %s unavailable (%s), trying fallback...", model_name, exc)
                         break
 
                     logger.warning("Gemini analysis attempt %d on %s failed: %s", attempt + 1, model_name, exc)
                     if attempt < 1:
-                        time.sleep(1.0)
+                        time.sleep(0.5)
                         continue
                     break
 
-        return None
+        # If all AI models are unavailable (e.g. expired or network outage), invoke deterministic fallback
+        logger.warning("All Gemini models unavailable; activating deterministic regex safety net.")
+        return cls._deterministic_fallback(clean_sender, clean_subject, clean_snippet)
 
