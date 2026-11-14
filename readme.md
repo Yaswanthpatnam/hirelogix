@@ -8,12 +8,14 @@
 [![Vite](https://img.shields.io/badge/vite-7.x-646CFF.svg)](https://vitejs.dev/)
 [![AI Engine](https://img.shields.io/badge/AI%20Engine-Groq%20LPU%20%2B%20Ollama%20Local-orange.svg)](https://groq.com/)
 [![Database](https://img.shields.io/badge/database-PostgreSQL%20%2F%20Neon-336791.svg)](https://neon.tech/)
+[![Demo Video](https://img.shields.io/badge/▶%EF%B8%8F%20Demo%20Video-Google%20Drive-red.svg)](https://drive.google.com/file/d/1duS8UImMxTzF_pKAL60cGTmae_M4uZ_c/view?usp=sharing)
 
 ---
 
 ## 📌 Table of Contents
 
 - [Overview](#-overview)
+- [Video Walkthrough & Demo](#-video-walkthrough--demo)
 - [Key Features](#-key-features)
 - [Architectural Innovations](#-architectural-innovations)
   - [1. Two-Tier Privacy Gatekeeper](#1-two-tier-privacy-gatekeeper)
@@ -25,9 +27,9 @@
 - [Tech Stack](#-tech-stack)
 - [Codebase Structure](#-codebase-structure)
 - [REST API Reference](#-rest-api-reference)
+- [Recommended Setup: Run Locally on Your Machine](#-recommended-setup-run-locally-on-your-machine)
 - [Environment Configuration & Security](#-environment-configuration--security)
-- [Deployment Guide (Vercel + Render)](#-deployment-guide-vercel--render)
-- [Local Development Setup](#-local-development-setup)
+- [Cloud Deployment (Optional)](#-cloud-deployment-optional)
 - [Author & Links](#-author--links)
 
 ---
@@ -37,6 +39,16 @@
 During an active technical job search, candidates submit tens or hundreds of applications across company portals, ATS platforms (Greenhouse, Lever, Workday, Ashby), and direct recruiter emails. Tracking application milestones manually across spreadsheets is tedious, error-prone, and quickly falls out of sync.
 
 **HireLogix** automates your entire job-search tracking workflow by connecting directly to Gmail through Google OAuth 2.0. It continuously monitors incoming mail, isolates authentic recruiter correspondence, extracts standardized company and role entities, tracks lifecycle milestones (`applied` → `under_review` → `assessment` → `interview` → `offer` / `rejected`), and renders real-time analytics—all with **zero manual effort**, **sub-second latency**, and **zero exposure of private personal or financial data**.
+
+---
+
+## 🎥 Video Walkthrough & Demo
+
+See HireLogix in action—from Google OAuth connection and sub-second Gmail delta synchronization to the 60-day interactive swipeable timeline, dynamic SVG donut chart, and real-time AI entity extraction:
+
+[![HireLogix Demo Walkthrough](https://img.shields.io/badge/▶%EF%B8%8F%20Watch%20Demo-HireLogix%20Walkthrough-red?style=for-the-badge&logo=google-drive&logoColor=white)](https://drive.google.com/file/d/1duS8UImMxTzF_pKAL60cGTmae_M4uZ_c/view?usp=sharing)
+
+> 📹 **Watch full video:** [HireLogix Demo Walkthrough (Google Drive)](https://drive.google.com/file/d/1duS8UImMxTzF_pKAL60cGTmae_M4uZ_c/view?usp=sharing)
 
 ---
 
@@ -291,102 +303,26 @@ hirelogix/
 
 ---
 
-## 🔐 Environment Configuration & Security
+## 💻 Recommended Setup: Run Locally on Your Machine
 
-> **Security Mandate:** Never commit actual `.env` files or API secrets to version control. The repository includes strict `.gitignore` rules preventing `.env`, `db.sqlite3`, and virtual environments from being tracked.
+> **Why Self-Host Locally?**
+> Because HireLogix directly accesses your private Gmail inbox using Google's sensitive `gmail.readonly` OAuth scope, **running it locally on your own machine is the safest and best way to use it**. 
+> - **100% Data Privacy:** Your emails, tokens, and job applications never touch a third-party hosted cloud.
+> - **Zero Google OAuth Restriction:** You can use your own personal Google Cloud credentials without needing public app verification.
+> - **Zero Cold Starts:** Runs with instant sub-second local latency.
 
-### Backend Configuration (`backend/.env`)
-
-Copy `backend/.env.example` to `backend/.env`:
-
-```ini
-# Django Core Settings
-DJANGO_SECRET_KEY=your_django_secret_key_here
-DJANGO_DEBUG=False
-DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,your-backend.onrender.com
-
-# Database (PostgreSQL / Neon Serverless)
-DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
-
-# Google OAuth 2.0 & Gmail Integration
-GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:8000/user/auth/google/callback/
-GMAIL_GOOGLE_REDIRECT_URI=http://localhost:8000/gmail/oauth/callback/
-
-# Frontend Application URL (for CORS and OAuth redirect)
-FRONTEND_URL=http://localhost:5173
-
-# AI Engine: Groq LPU (High-Speed Cloud Inference)
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL_NAME=qwen/qwen3.8-27b
-
-# AI Engine: Ollama (Optional Local Offline Inference)
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:1.5b
+### 1. Clone & Fork the Repository
+```bash
+git clone https://github.com/Yaswanthpatnam/hirelogix.git
+cd hirelogix
+git checkout hirelogix-v2
 ```
 
-### Frontend Configuration (`frontend/.env`)
-
-Copy `frontend/.env.example` to `frontend/.env`:
-
-```ini
-VITE_API_BASE_URL=http://localhost:8000
-VITE_GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
-```
-
----
-
-## 🚀 Deployment Guide (Vercel + Render)
-
-### 1. Backend on Render (Web Service)
-1. Create a new **Web Service** on Render connected to your repository.
-2. Configure settings:
-   - **Root Directory:** `backend`
-   - **Environment:** `Python 3`
-   - **Build Command:** `pip install -r requirements.txt && python manage.py migrate`
-   - **Start Command:** `gunicorn core.wsgi:application`
-3. Add Environment Variables in the Render dashboard:
-   - `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS`
-   - `DATABASE_URL` (Neon PostgreSQL)
-   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-   - `GOOGLE_REDIRECT_URI=https://<your-backend>.onrender.com/user/auth/google/callback/`
-   - `GMAIL_GOOGLE_REDIRECT_URI=https://<your-backend>.onrender.com/gmail/oauth/callback/`
-   - `FRONTEND_URL=https://<your-frontend>.vercel.app`
-   - `GROQ_API_KEY` *(Ollama is automatically and gracefully bypassed on Render)*
-
-### 2. Frontend on Vercel
-1. Import the repository into Vercel.
-2. Configure settings:
-   - **Framework Preset:** Vite
-   - **Root Directory:** `frontend`
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-3. Add Environment Variables in the Vercel dashboard:
-   - `VITE_API_BASE_URL=https://<your-backend>.onrender.com`
-   - `VITE_GOOGLE_CLIENT_ID=<your-google-client-id>`
-
-### 3. Google Cloud Console Credentials
-Add the production domains to your OAuth 2.0 Web Client in Google Cloud Console:
-- **Authorized JavaScript Origins:**
-  - `http://localhost:5173`
-  - `http://localhost:4173`
-  - `https://<your-frontend>.vercel.app`
-- **Authorized Redirect URIs:**
-  - `http://localhost:8000/gmail/oauth/callback/`
-  - `https://<your-backend>.onrender.com/gmail/oauth/callback/`
-  - `https://<your-backend>.onrender.com/user/auth/google/callback/`
-
----
-
-## ⚙️ Local Development Setup
-
-### 1. Backend Setup
+### 2. Backend Setup
 ```bash
 cd backend
 python -m venv venv
 
-# Activate Virtual Environment:
 # Windows (PowerShell):
 .\venv\Scripts\Activate.ps1
 # macOS / Linux:
@@ -398,13 +334,62 @@ python manage.py runserver
 ```
 Backend runs at `http://localhost:8000/`.
 
-### 2. Frontend Setup
+### 3. Frontend Setup
 ```bash
-cd frontend
+cd ../frontend
 npm install
 npm run dev
 ```
 Frontend runs at `http://localhost:5173/`.
+
+---
+
+## 🔐 Environment Configuration & Security
+
+Create a `.env` file in `backend/` using `backend/.env.example` as a template:
+
+```ini
+# Django Core Settings
+DJANGO_SECRET_KEY=your_django_secret_key_here
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+
+# Database (Leave as PostgreSQL or use local DB)
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+
+# Google OAuth 2.0 Credentials (From your Google Cloud Console)
+GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:8000/user/auth/google/callback/
+GMAIL_GOOGLE_REDIRECT_URI=http://localhost:8000/gmail/oauth/callback/
+
+# Frontend URL
+FRONTEND_URL=http://localhost:5173
+
+# AI Engine: Groq LPU (High-Speed Cloud Inference)
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL_NAME=qwen/qwen3.8-27b
+
+# AI Engine: Ollama (Optional Local Offline Inference)
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:1.5b
+```
+
+Create a `.env` file in `frontend/` using `frontend/.env.example`:
+
+```ini
+VITE_API_BASE_URL=http://localhost:8000
+VITE_GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+```
+
+---
+
+## ☁️ Cloud Deployment (Optional)
+
+If deploying for private personal use on **Render** (backend) and **Vercel** (frontend):
+* Follow the environment variable templates in `backend/.env.example` and `frontend/.env.example`.
+* In Google Cloud Console, register your production domains under **Authorized JavaScript Origins** and **Authorized Redirect URIs**.
+* Note: Unverified Google OAuth apps in "Testing" mode are restricted to developer-added test user emails.
 
 ---
 
@@ -413,4 +398,4 @@ Frontend runs at `http://localhost:5173/`.
 - **Author / Lead Architect:** Yaswanth Patnam
 - **GitHub Repository:** [Yaswanthpatnam/hirelogix](https://github.com/Yaswanthpatnam/hirelogix)
 - **Branch:** `hirelogix-v2`
-- **Live Frontend:** [hirelogix.vercel.app](https://hirelogix.vercel.app/)
+- **Demo Walkthrough Video:** [Watch on Google Drive](https://drive.google.com/file/d/1duS8UImMxTzF_pKAL60cGTmae_M4uZ_c/view?usp=sharing)
