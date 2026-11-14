@@ -36,6 +36,10 @@ import {
   getStoredUser,
 } from "../utils/dashboardHelpers";
 
+import {
+  startGmailAuthorization,
+} from "../services/gmail";
+
 
 const DASHBOARD_VIEWS = [
   "Overview",
@@ -111,6 +115,7 @@ export default function Dashboard() {
     loading,
     isSyncing,
     error,
+    gmailConnection,
     refresh,
     updateLocalJob,
   } =
@@ -329,6 +334,17 @@ export default function Dashboard() {
 
     };
 
+
+  const handleReconnect = async () => {
+    try {
+      const data = await startGmailAuthorization(true);
+      if (data?.authorization_url) {
+        window.location.href = data.authorization_url;
+      }
+    } catch (err) {
+      console.error("Failed to start reconnect:", err);
+    }
+  };
 
   const handleSync =
     async () => {
@@ -571,17 +587,17 @@ export default function Dashboard() {
           isSyncing={
             isSyncing
           }
+          gmailConnection={
+            gmailConnection
+          }
           onMenu={
             () =>
               setMobileOpen(
                 true
               )
           }
-          onSync={
-            handleSync
-          }
-          syncText={
-            syncText
+          onReconnect={
+            handleReconnect
           }
         />
 

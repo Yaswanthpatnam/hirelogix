@@ -35,18 +35,12 @@ class GmailMessageParser:
             header_data[name] = value
 
         return {
-            "from": header_data.get(
-                "from"
-            ),
-            "subject": header_data.get(
-                "subject"
-            ),
-            "date": header_data.get(
-                "date"
-            ),
-            "to": header_data.get(
-                "to"
-            ),
+            "from": header_data.get("from"),
+            "subject": header_data.get("subject"),
+            "date": header_data.get("date"),
+            "to": header_data.get("to"),
+            "list_unsubscribe": header_data.get("list-unsubscribe"),
+            "precedence": header_data.get("precedence"),
         }
 
     @staticmethod

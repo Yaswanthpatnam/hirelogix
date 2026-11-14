@@ -1,5 +1,5 @@
 from datetime import timedelta
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.utils import timezone
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
@@ -38,18 +38,18 @@ class JobApplicationListView(generics.ListAPIView):
                 | Q(job_emails__snippet__icontains=search)
             ).distinct()
 
-        # Handle custom ordering safely
-        allowed_ordering = {
-            "last_email_at": "last_email_at",
-            "-last_email_at": "-last_email_at",
-            "created_at": "created_at",
-            "-created_at": "-created_at",
-            "company_name": "company_name",
-            "-company_name": "-company_name",
-            "status": "status",
+        # Clean dictionary mapping for PostgreSQL nulls_last ordering
+        ordering_map = {
+            "-last_email_at": (F("last_email_at").desc(nulls_last=True), F("updated_at").desc()),
+            "last_email_at": (F("last_email_at").asc(nulls_last=True), F("updated_at").asc()),
+            "-created_at": (F("created_at").desc(nulls_last=True), F("updated_at").desc()),
+            "created_at": (F("created_at").asc(nulls_last=True), F("updated_at").asc()),
+            "company_name": (F("company_name").asc(nulls_last=True), F("updated_at").desc()),
+            "-company_name": (F("company_name").desc(nulls_last=True), F("updated_at").desc()),
+            "status": ("status", F("last_email_at").desc(nulls_last=True)),
         }
-        order_by = allowed_ordering.get(ordering, "-last_email_at")
-        return queryset.order_by(order_by, "-updated_at")
+        order_fields = ordering_map.get(ordering, ordering_map["-last_email_at"])
+        return queryset.order_by(*order_fields)
 
 
 class JobApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -119,15 +119,16 @@ class JobApplicationSummaryView(APIView):
 
         return Response(summary)
 
-    def build_activity(self, apps):
+    def build_activity(self, apps, days_count=60):
         today = timezone.localdate()
         days = []
 
-        for offset in range(6, -1, -1):
+        for offset in range(days_count - 1, -1, -1):
             current_day = today - timedelta(days=offset)
             days.append({
                 "key": current_day.isoformat(),
                 "label": current_day.strftime("%a"),
+                "date_label": current_day.strftime("%b %d"),
                 "value": 0,
             })
 
@@ -149,11 +150,12 @@ class JobApplicationSummaryView(APIView):
         """Constructs unified multi-thread timeline sorted by most recent email/update."""
         recent_apps = JobApplication.objects.filter(
             user=user,
-        ).prefetch_related("job_emails").order_by("-last_email_at", "-updated_at")[:25]
+        ).prefetch_related("job_emails").order_by(F("last_email_at").desc(nulls_last=True), F("updated_at").desc())[:25]
 
         timeline = []
         for app in recent_apps:
-            latest_email = app.job_emails.order_by("-created_at").first()
+            emails = list(app.job_emails.all())
+            latest_email = max(emails, key=lambda e: e.created_at) if emails else None
             subject = latest_email.subject if latest_email else ""
             snippet = latest_email.snippet if latest_email else ""
 
@@ -167,7 +169,7 @@ class JobApplicationSummaryView(APIView):
                 "subject": subject,
                 "snippet": snippet,
                 "interview_link": app.interview_link,
-                "email_count": app.job_emails.count(),
+                "email_count": len(emails),
             })
 
         return timeline

@@ -36,6 +36,8 @@ class GmailAuthStartAPI(APIView):
         request,
     ):
 
+        # Allow force reconnect via ?reconnect=true, or if connection is inactive
+        force_reconnect = request.query_params.get("reconnect") == "true"
         existing_connection = (
             GmailConnection.objects
             .filter(
@@ -45,8 +47,7 @@ class GmailAuthStartAPI(APIView):
             .first()
         )
 
-        if existing_connection:
-
+        if existing_connection and not force_reconnect:
             return Response(
                 {
                     "already_connected": True,
@@ -422,53 +423,41 @@ class GmailConnectionStatusAPI(APIView):
                 status=status.HTTP_200_OK,
             )
 
+        is_active = bool(connection.is_active)
+        needs_reconnect = not is_active
+
         return Response(
             {
-                "connected":
-                    bool(
-                        connection.is_active
-                    ),
-
-                "google_email":
-                    connection.google_email,
-
-                "historical_sync_completed":
-                    connection
-                    .historical_sync_completed,
-
-                "job_search_started_on":
-                    (
-                        str(
-                            connection
-                            .job_search_started_on
-                        )
-                        if connection
-                        .job_search_started_on
-                        else None
-                    ),
-
-                "last_sync_at":
-                    (
-                        connection.last_sync_at
-                        if connection.last_sync_at
-                        else None
-                    ),
+                "connected": is_active,
+                "needs_reconnect": needs_reconnect,
+                "is_active": is_active,
+                "google_email": connection.google_email,
+                "historical_sync_completed": connection.historical_sync_completed,
+                "job_search_started_on": (
+                    str(connection.job_search_started_on)
+                    if connection.job_search_started_on
+                    else None
+                ),
+                "last_sync_at": (
+                    connection.last_sync_at
+                    if connection.last_sync_at
+                    else None
+                ),
             },
             status=status.HTTP_200_OK,
         )
 
 
-class GmailTokenTestAPI(APIView):
+class GmailIncrementalSyncAPI(APIView):
 
     permission_classes = [
         IsAuthenticated
     ]
 
-    def get(
+    def post(
         self,
         request,
     ):
-
         connection = (
             GmailConnection.objects
             .filter(
@@ -479,7 +468,6 @@ class GmailTokenTestAPI(APIView):
         )
 
         if not connection:
-
             return Response(
                 {
                     "error":
@@ -489,204 +477,24 @@ class GmailTokenTestAPI(APIView):
             )
 
         try:
+            if not connection.last_history_id:
+                GmailSyncService.initialize_history_checkpoint(connection)
 
-            GmailService.get_valid_access_token(
-                connection
-            )
+            sync_result = GmailSyncService.sync_incremental_job_emails(connection)
+            return Response(sync_result, status=status.HTTP_200_OK)
 
+        except ValueError as exc:
             return Response(
                 {
-                    "message":
-                        "Valid Gmail access token "
-                        "retrieved successfully."
-                }
-            )
-
-        except Exception as exc:
-
-            print(
-                "GMAIL TOKEN TEST ERROR:",
-                repr(exc),
-            )
-
-            return Response(
-                {
-                    "error":
-                        str(exc)
+                    "error": str(exc),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-
-class GmailMessagesTestAPI(APIView):
-
-    permission_classes = [
-        IsAuthenticated
-    ]
-
-    def get(
-        self,
-        request,
-    ):
-
-        connection = (
-            GmailConnection.objects
-            .filter(
-                user=request.user,
-                is_active=True,
-            )
-            .first()
-        )
-
-        if not connection:
-
-            return Response(
-                {
-                    "error":
-                        "No active Gmail connection found."
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        try:
-
-            access_token = (
-                GmailService
-                .get_valid_access_token(
-                    connection
-                )
-            )
-
-            messages_data = (
-                GmailOAuthService
-                .list_messages(
-                    access_token=access_token,
-                    max_results=10,
-                )
-            )
-
-            return Response(
-                messages_data
-            )
-
         except Exception as exc:
-
-            print(
-                "GMAIL MESSAGE LIST ERROR:",
-                repr(exc),
-            )
-
+            print("GMAIL INCREMENTAL SYNC ERROR:", repr(exc))
             return Response(
                 {
-                    "error":
-                        "Unable to retrieve Gmail messages."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-
-class GmailMessageTestAPI(APIView):
-
-    permission_classes = [
-        IsAuthenticated
-    ]
-
-    def get(
-        self,
-        request,
-        message_id,
-    ):
-
-        connection = (
-            GmailConnection.objects
-            .filter(
-                user=request.user,
-                is_active=True,
-            )
-            .first()
-        )
-
-        if not connection:
-
-            return Response(
-                {
-                    "error":
-                        "No active Gmail connection found."
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        try:
-
-            access_token = (
-                GmailService
-                .get_valid_access_token(
-                    connection
-                )
-            )
-
-            message = (
-                GmailOAuthService
-                .get_message(
-                    access_token=access_token,
-                    message_id=message_id,
-                )
-            )
-
-            parsed_headers = (
-                GmailMessageParser
-                .get_headers(
-                    message
-                )
-            )
-
-            parsed_body = (
-                GmailMessageParser
-                .get_body(
-                    message
-                )
-            )
-
-            return Response(
-                {
-                    "id":
-                        message.get("id"),
-
-                    "thread_id":
-                        message.get("threadId"),
-
-                    "from":
-                        parsed_headers.get(
-                            "from"
-                        ),
-
-                    "subject":
-                        parsed_headers.get(
-                            "subject"
-                        ),
-
-                    "date":
-                        parsed_headers.get(
-                            "date"
-                        ),
-
-                    "body":
-                        parsed_body,
-                },
-                status=status.HTTP_200_OK,
-            )
-
-        except Exception as exc:
-
-            print(
-                "GMAIL MESSAGE TEST ERROR:",
-                repr(exc),
-            )
-
-            return Response(
-                {
-                    "error":
-                        "Unable to retrieve Gmail message."
+                    "error": "Unable to complete incremental Gmail sync."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )

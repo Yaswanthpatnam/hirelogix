@@ -17,10 +17,13 @@ export async function getGmailConnectionStatus() {
 /*
  * Start the separate Gmail authorization flow.
  */
-export async function startGmailAuthorization() {
+export async function startGmailAuthorization(forceReconnect = false) {
   const response =
     await api.get(
-      "/gmail/auth/start/"
+      "/gmail/auth/start/",
+      {
+        params: forceReconnect ? { reconnect: "true" } : {},
+      }
     );
 
   return response.data;

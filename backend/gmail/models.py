@@ -164,6 +164,12 @@ class GmailJobEmail(models.Model):
         blank=True,
     )
 
+    is_processed = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True if this candidate has been evaluated by the AI batch importer."
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         db_index=True,

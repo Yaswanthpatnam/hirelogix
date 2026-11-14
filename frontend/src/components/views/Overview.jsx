@@ -120,6 +120,17 @@ export default function Overview({
       user
     );
 
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) {
+      return "Good morning";
+    }
+    if (hour >= 12 && hour < 17) {
+      return "Good afternoon";
+    }
+    return "Good evening";
+  }, []);
+
 
   /*
    * =========================================================
@@ -312,7 +323,7 @@ export default function Overview({
           </span>
 
           <h1>
-            Good morning,{" "}
+            {greeting},{" "}
             {firstName}
           </h1>
 
@@ -343,26 +354,6 @@ export default function Overview({
         </button>
 
       </header>
-
-      {isSyncing && (
-        <div style={{
-          background: "rgba(135, 59, 191, 0.12)",
-          border: "1px solid rgba(135, 59, 191, 0.3)",
-          borderRadius: "14px",
-          padding: "14px 20px",
-          marginBottom: "24px",
-          display: "flex",
-          alignItems: "center",
-          gap: "14px",
-          color: "var(--brand-light, #e0c8ff)",
-          fontSize: "14px"
-        }}>
-          <Sparkles size={20} className="permission-spin" />
-          <span>
-            <strong>Gemini is analyzing your mailbox...</strong> Verified applications and status updates are being imported and will appear below in real-time.
-          </span>
-        </div>
-      )}
 
       <div className="stats-grid">
 
@@ -630,7 +621,7 @@ export default function Overview({
 
           <SectionHeading
             title="Application activity"
-            description="Applications submitted over the last seven days."
+            description="Interactive timeline of applications submitted over time. Swipe or use controls to browse dates."
           />
 
 

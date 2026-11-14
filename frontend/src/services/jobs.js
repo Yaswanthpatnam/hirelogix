@@ -16,6 +16,7 @@ export async function getJobs({
   page = 1,
   status = "",
   search = "",
+  ordering = "",
 } = {}) {
 
   const params = {
@@ -33,6 +34,13 @@ export async function getJobs({
   if (search) {
 
     params.search = search;
+
+  }
+
+
+  if (ordering) {
+
+    params.ordering = ordering;
 
   }
 

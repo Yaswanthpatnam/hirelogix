@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -98,159 +99,128 @@ export default function useDashboardData() {
     setError,
   ] = useState("");
 
+  const [
+    gmailConnection,
+    setGmailConnection,
+  ] = useState(null);
 
-  const loadDashboardData =
-    useCallback(
-      async () => {
-        try {
-          setLoading(true);
-          setError("");
+  const isSyncingRef = useRef(false);
+  const pollTimerRef = useRef(null);
 
-          let [
-            summaryData,
-            jobsData,
-          ] = await Promise.all([
-            getJobSummary(),
-            getJobs({
-              page: 1,
-            }),
-          ]);
+  const fetchLatestData = useCallback(async () => {
+    try {
+      const [summaryData, jobsData] = await Promise.all([
+        getJobSummary(),
+        getJobs({ page: 1 }),
+      ]);
+      setSummary(normalizeSummary(summaryData));
+      setJobs(normalizeJobs(jobsData));
+    } catch (_) {}
+  }, []);
 
-          let normSummary = normalizeSummary(summaryData);
-          let normJobs = normalizeJobs(jobsData);
-          setSummary(normSummary);
-          setJobs(normJobs);
-          setLoading(false);
+  const runAutoSync = useCallback(async (connectionOverride = null) => {
+    if (isSyncingRef.current) return;
 
-          // If historical sync is not yet complete, trigger a background pass
-          try {
-            const gmailStatus = await getGmailConnectionStatus();
-            if (gmailStatus?.connected) {
-              if (!gmailStatus?.historical_sync_completed) {
-                // Background single pass to make progress without blocking UI
-                syncHistoricalGmail().then(() => {
-                  Promise.all([getJobSummary(), getJobs({ page: 1 })]).then(([s, j]) => {
-                    setSummary(normalizeSummary(s));
-                    setJobs(normalizeJobs(j));
-                  });
-                }).catch(() => {});
-              } else {
-                // Quick incremental check in background
-                syncIncrementalGmail().then(() => {
-                  Promise.all([getJobSummary(), getJobs({ page: 1 })]).then(([s, j]) => {
-                    setSummary(normalizeSummary(s));
-                    setJobs(normalizeJobs(j));
-                  });
-                }).catch(() => {});
-              }
-            }
-          } catch (_) {
-            // Ignore connection check error
-          }
+    try {
+      const status = connectionOverride || await getGmailConnectionStatus();
+      setGmailConnection(status);
 
-          return true;
+      if (!status?.connected || status?.needs_reconnect) {
+        return;
+      }
 
-        } catch (err) {
-          console.error(
-            "Dashboard data failed:",
-            err
-          );
+      isSyncingRef.current = true;
+      setIsSyncing(true);
 
-          setError(
-            err?.response?.data?.detail ||
-            err?.response?.data?.error ||
-            "Unable to load your job search data."
-          );
+      // Start live polling while AI model processes applications in background
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      pollTimerRef.current = setInterval(() => {
+        fetchLatestData();
+      }, 2500);
 
-          return false;
+      if (!status.historical_sync_completed) {
+        await syncHistoricalGmail().catch(() => {});
+      } else {
+        await syncIncrementalGmail().catch(() => {});
+      }
+    } catch (err) {
+      console.warn("Background auto-sync note:", err);
+    } finally {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      // One final fetch to ensure all newly created/updated applications are reflected
+      await fetchLatestData();
+      isSyncingRef.current = false;
+      setIsSyncing(false);
+    }
+  }, [fetchLatestData]);
 
-        } finally {
-          setLoading(false);
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [summaryData, jobsData] = await Promise.all([
+        getJobSummary(),
+        getJobs({ page: 1 }),
+      ]);
+
+      setSummary(normalizeSummary(summaryData));
+      setJobs(normalizeJobs(jobsData));
+      setLoading(false);
+
+      // Check Gmail connection and trigger background sync
+      try {
+        const gmailStatus = await getGmailConnectionStatus();
+        setGmailConnection(gmailStatus);
+
+        if (gmailStatus?.connected && !gmailStatus?.needs_reconnect) {
+          runAutoSync(gmailStatus);
         }
-      },
-      []
-    );
+      } catch (_) {
+        // Ignore connection check error
+      }
 
+      return true;
+    } catch (err) {
+      console.error("Dashboard data failed:", err);
+      setError(
+        err?.response?.data?.detail ||
+        err?.response?.data?.error ||
+        "Unable to load your job search data."
+      );
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [runAutoSync]);
 
-  const refresh =
-    useCallback(
-      async () => {
-        try {
-          setIsSyncing(true);
-          setError("");
+  const refresh = useCallback(async () => {
+    return runAutoSync();
+  }, [runAutoSync]);
 
-          const gmailStatus =
-            await getGmailConnectionStatus();
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
-          if (gmailStatus?.connected) {
-            try {
-              // Always run sub-second incremental delta sync on refresh
-              await syncIncrementalGmail();
-            } catch (syncErr) {
-              console.warn("Incremental sync note during refresh:", syncErr);
-              // If incremental returned error (e.g. historical in progress), try single historical step
-              try {
-                await syncHistoricalGmail();
-              } catch (_) {}
-            }
-          }
+  // Automatic incremental sync when user switches back to tab or focuses window
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!isSyncingRef.current) {
+        runAutoSync();
+      }
+    };
 
-          const [
-            summaryData,
-            jobsData,
-          ] = await Promise.all([
-            getJobSummary(),
-            getJobs({
-              page: 1,
-            }),
-          ]);
-
-          setSummary(
-            normalizeSummary(
-              summaryData
-            )
-          );
-
-          setJobs(
-            normalizeJobs(
-              jobsData
-            )
-          );
-
-          return true;
-
-        } catch (err) {
-          console.error(
-            "Dashboard refresh failed:",
-            err
-          );
-
-          setError(
-            err?.response?.data?.error ||
-            err?.response?.data?.detail ||
-            "Unable to refresh Gmail job data."
-          );
-
-          return false;
-
-        } finally {
-          setIsSyncing(false);
-          setLoading(false);
-        }
-      },
-      []
-    );
-
-
-  useEffect(
-    () => {
-      loadDashboardData();
-    },
-    [
-      loadDashboardData,
-    ]
-  );
-
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+      }
+    };
+  }, [runAutoSync]);
 
   const updateLocalJob = useCallback((updatedJob) => {
     if (!updatedJob?.id) return;
@@ -276,6 +246,7 @@ export default function useDashboardData() {
     loading,
     isSyncing,
     error,
+    gmailConnection,
     refresh,
     updateLocalJob,
   };

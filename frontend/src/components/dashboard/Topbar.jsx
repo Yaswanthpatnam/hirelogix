@@ -1,8 +1,7 @@
 import {
-  Bell,
   ChevronRight,
   Menu,
-  Zap,
+  Sparkles,
 } from "lucide-react";
 
 
@@ -10,10 +9,13 @@ export default function Topbar({
   activeNav,
   hasApplications,
   isSyncing,
+  gmailConnection,
   onMenu,
-  onSync,
-  syncText,
+  onReconnect,
 }) {
+  const isConnected = Boolean(gmailConnection?.connected);
+  const needsReconnect = Boolean(gmailConnection?.needs_reconnect);
+
   return (
     <header className="topbar">
 
@@ -45,50 +47,54 @@ export default function Topbar({
 
       <div className="topbar-actions">
 
+        {/* Live background AI processing indicator */}
+        {isSyncing && (
+          <div className="ai-processing-pill">
+            <Sparkles size={13} className="ai-sparkle-spin" />
+            <span>AI model analyzing emails...</span>
+          </div>
+        )}
+
+        {/* Real-time Gmail connection status */}
         <div className="gmail-status">
 
           <span
             className={
-              isSyncing
-                ? "status-live permission-spin"
-                : hasApplications
+              needsReconnect
+                ? "status-off"
+                : isConnected
                 ? "status-live"
                 : "status-off"
+            }
+            style={
+              needsReconnect
+                ? { background: "#ff6b6b", boxShadow: "0 0 10px rgba(255,107,107,0.5)" }
+                : {}
             }
           />
 
           <span>
             {
-              isSyncing
-                ? "Syncing with Gemini..."
-                : hasApplications
-                ? "Job data loaded"
-                : "No applications"
+              needsReconnect
+                ? "Gmail session expired"
+                : isConnected
+                ? "Gmail connected"
+                : "Gmail not connected"
             }
           </span>
 
         </div>
 
-
-        <button
-          className="sync-button"
-          onClick={onSync}
-          disabled={isSyncing}
-        >
-
-          <Zap size={13} className={isSyncing ? "permission-spin" : ""} />
-
-          {isSyncing ? "Syncing..." : syncText}
-
-        </button>
-
-
-        <button
-          className="icon-button"
-          aria-label="Notifications"
-        >
-          <Bell size={17} />
-        </button>
+        {/* Only show reconnect action if authentication was revoked / expired */}
+        {needsReconnect && onReconnect && (
+          <button
+            className="sync-button"
+            onClick={onReconnect}
+            style={{ borderColor: "#ff6b6b", color: "#ff6b6b" }}
+          >
+            Reconnect Gmail
+          </button>
+        )}
 
       </div>
 

@@ -8,10 +8,5 @@ from .gmail_import_service import (
 )
 
 
-@receiver(post_save, sender=GmailJobEmail)
-def import_new_gmail_candidate(sender, instance, created, **kwargs):
-    if not created:
-        return
-    if getattr(instance, "job_application_id", None):
-        return
-    GmailJobApplicationImporter.import_candidate(instance)
+# All ingestion and deduplication is managed through GmailSyncService.import_candidates_batch
+# Synchronous post_save signals are disabled to prevent race conditions and duplicate calls.

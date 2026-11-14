@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -58,6 +59,29 @@ const STATUS_OPTIONS = [
   },
 ];
 
+const SORT_OPTIONS = [
+  {
+    value: "-last_email_at",
+    label: "Newest first",
+  },
+  {
+    value: "last_email_at",
+    label: "Oldest first",
+  },
+  {
+    value: "company_name",
+    label: "Company (A–Z)",
+  },
+  {
+    value: "-company_name",
+    label: "Company (Z–A)",
+  },
+  {
+    value: "status",
+    label: "Status",
+  },
+];
+
 
 function normalizeJobsResponse(
   response
@@ -107,6 +131,8 @@ export default function ApplicationsView({
   initialJobs = [],
   onSelect,
 }) {
+  const hasPrimedRef = useRef(false);
+
   const [
     jobs,
     setJobs,
@@ -128,6 +154,12 @@ export default function ApplicationsView({
     setStatus,
   ] =
     useState("");
+
+  const [
+    ordering,
+    setOrdering,
+  ] =
+    useState("-last_email_at");
 
   const [
     search,
@@ -188,6 +220,7 @@ export default function ApplicationsView({
               page,
               status,
               search,
+              ordering,
             });
 
           const normalized =
@@ -228,6 +261,7 @@ export default function ApplicationsView({
         page,
         status,
         search,
+        ordering,
       ]
     );
 
@@ -264,10 +298,38 @@ export default function ApplicationsView({
     ]
   );
 
+  useEffect(() => {
+    if (
+      !hasPrimedRef.current &&
+      Array.isArray(initialJobs) &&
+      initialJobs.length > 0 &&
+      page === 1 &&
+      !status &&
+      !search &&
+      ordering === "-last_email_at"
+    ) {
+      hasPrimedRef.current = true;
+      setJobs(initialJobs);
+      setPagination((prev) => ({
+        ...prev,
+        count: Math.max(prev.count, initialJobs.length),
+      }));
+    }
+  }, [initialJobs, page, status, search, ordering]);
+
 
   const handleStatusChange =
     (event) => {
       setStatus(
+        event.target.value
+      );
+
+      setPage(1);
+    };
+
+  const handleOrderingChange =
+    (event) => {
+      setOrdering(
         event.target.value
       );
 
@@ -326,6 +388,26 @@ export default function ApplicationsView({
         >
           {
             STATUS_OPTIONS.map(
+              (option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              )
+            )
+          }
+        </select>
+
+        <select
+          value={ordering}
+          onChange={handleOrderingChange}
+          className="status-filter"
+          aria-label="Sort applications"
+        >
+          {
+            SORT_OPTIONS.map(
               (option) => (
                 <option
                   key={option.value}

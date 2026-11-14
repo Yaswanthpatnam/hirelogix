@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
+from django.core.cache import cache
 from django.utils import timezone
 
 from jobs.gmail_import_service import GmailJobApplicationImporter
@@ -10,8 +11,8 @@ from .oauth_service import GmailOAuthService
 
 
 class GmailSyncService:
-    PAGE_SIZE = 12
-    MAX_METADATA_WORKERS = 6
+    PAGE_SIZE = 40
+    MAX_METADATA_WORKERS = 3
 
     JOB_SEARCH_TERMS = [
         "application",
@@ -23,6 +24,12 @@ class GmailSyncService:
         "shortlisted",
         "offer",
         "rejected",
+        "referred",
+        "referral",
+        "screening",
+        "recruiting",
+        "careers",
+        "internship",
         "hackerrank",
         "codility",
         "hirevue",
@@ -73,7 +80,7 @@ class GmailSyncService:
         return matched_keywords
 
     @classmethod
-    def fetch_message_metadata(cls, access_token, message_id, max_retries=2):
+    def fetch_message_metadata(cls, access_token, message_id, max_retries=3):
         """Tier 1: Fetches only metadata headers without body with rate-limit retry."""
         import time
         for attempt in range(max_retries + 1):
@@ -86,7 +93,7 @@ class GmailSyncService:
                 )
             except requests.HTTPError as err:
                 if err.response is not None and err.response.status_code in (403, 429) and attempt < max_retries:
-                    time.sleep(0.5 * (attempt + 1))
+                    time.sleep(1.5 * (attempt + 1))
                     continue
                 raise
 
@@ -172,7 +179,24 @@ class GmailSyncService:
             to_header = headers.get("to") or ""
             snippet = GmailMessageParser.get_snippet(meta)
             email_date = headers.get("date") or ""
+            internal_date = meta.get("internalDate")
+            if not email_date and internal_date:
+                email_date = str(internal_date)
             body_text = f"To: {to_header}\n{snippet}" if to_header else snippet
+
+            # Fetch clean body preview (first 400 chars) for confirmed candidates to capture rejection euphemisms
+            try:
+                full_msg = GmailOAuthService.get_message(
+                    access_token=access_token,
+                    message_id=mid,
+                    message_format="full",
+                )
+                clean_body = GmailMessageParser.get_clean_body_text(full_msg)
+                if clean_body:
+                    body_text = clean_body[:500]
+                    snippet = clean_body[:350]
+            except Exception:
+                pass
 
             candidate, created = GmailJobEmail.objects.get_or_create(
                 gmail_connection=connection,
@@ -200,10 +224,10 @@ class GmailSyncService:
                 if not candidate.job_application_id:
                     candidates_to_import.append(candidate)
 
-        # Run semantic classifier and deduplication with pacing to prevent quota bursts
+        # High-Speed Parallel Batch Classification & In-Memory Deduplication
         if candidates_to_import:
-            for cand in candidates_to_import:
-                GmailJobApplicationImporter.import_candidate(cand)
+            batch_res = GmailJobApplicationImporter.import_candidates_batch(candidates_to_import)
+            created_count = batch_res.get("created_count", created_count)
 
         return {
             "created_count": created_count,
@@ -212,91 +236,122 @@ class GmailSyncService:
         }
 
     @classmethod
-    def sync_historical_job_emails(cls, connection, max_pages=1):
-        if connection.historical_sync_completed:
-            # Recover any candidates whose initial Gemini analysis failed or was rate-limited
-            unprocessed = list(GmailJobEmail.objects.filter(
-                gmail_connection=connection,
-                job_application_id__isnull=True,
-            )[:15])
-            if unprocessed:
-                for cand in unprocessed:
-                    GmailJobApplicationImporter.import_candidate(cand)
-
+    def sync_historical_job_emails(cls, connection, max_pages=25):
+        lock_key = f"gmail_sync_lock_{connection.id}"
+        if not cache.add(lock_key, "locked", timeout=180):
             return {
                 "search_query": cls.build_job_search_query(connection.job_search_started_on),
                 "candidate_count": 0,
                 "created_count": 0,
-                "existing_count": len(unprocessed),
+                "existing_count": 0,
                 "has_more": False,
-                "message": "Historical Gmail sync is already complete.",
+                "message": "A sync is already active for this connection.",
             }
 
-        access_token = GmailService.get_valid_access_token(connection)
-        search_query = cls.build_job_search_query(connection.job_search_started_on)
+        try:
+            if connection.historical_sync_completed:
+                # Recover any candidates whose initial AI analysis failed or was rate-limited
+                unprocessed = list(GmailJobEmail.objects.filter(
+                    gmail_connection=connection,
+                    job_application_id__isnull=True,
+                    is_processed=False,
+                ).order_by("-id")[:10])
+                if unprocessed:
+                    GmailJobApplicationImporter.import_candidates_batch(unprocessed)
 
-        total_created = 0
-        total_existing = 0
-        total_messages_seen = 0
-        current_page_token = connection.historical_next_page_token
-        pages_processed = 0
+                return {
+                    "search_query": cls.build_job_search_query(connection.job_search_started_on),
+                    "candidate_count": 0,
+                    "created_count": 0,
+                    "existing_count": len(unprocessed),
+                    "has_more": False,
+                    "message": "Historical Gmail sync is already complete.",
+                }
 
-        while pages_processed < max_pages:
-            messages_data = GmailOAuthService.list_messages(
-                access_token=access_token,
-                query=search_query,
-                max_results=cls.PAGE_SIZE,
-                page_token=current_page_token,
-            )
+            access_token = GmailService.get_valid_access_token(connection)
+            search_query = cls.build_job_search_query(connection.job_search_started_on)
 
-            messages = messages_data.get("messages", [])
-            if not messages:
-                current_page_token = None
-                break
+            total_created = 0
+            total_existing = 0
+            total_messages_seen = 0
+            current_page_token = connection.historical_next_page_token
+            pages_processed = 0
 
-            total_messages_seen += len(messages)
-            message_ids = [m.get("id") for m in messages if m.get("id")]
-            metadata_messages = cls.fetch_metadata_batch(
-                access_token=access_token,
-                message_ids=message_ids,
-            )
+            while pages_processed < max_pages:
+                messages_data = None
+                for attempt in range(4):
+                    try:
+                        access_token = GmailService.get_valid_access_token(connection)
+                        messages_data = GmailOAuthService.list_messages(
+                            access_token=access_token,
+                            query=search_query,
+                            max_results=cls.PAGE_SIZE,
+                            page_token=current_page_token,
+                        )
+                        break
+                    except requests.HTTPError as err:
+                        if err.response is not None and err.response.status_code in (401, 403, 429) and attempt < 3:
+                            import time
+                            time.sleep(3.0 * (attempt + 1))
+                            connection.refresh_from_db()
+                            connection.token_expires_at = None
+                            connection.save(update_fields=["token_expires_at"])
+                            continue
+                        raise
 
-            batch_result = cls.process_metadata_batch(
-                connection=connection,
-                access_token=access_token,
-                metadata_messages=metadata_messages,
-            )
-            total_created += batch_result["created_count"]
-            total_existing += batch_result["existing_count"]
+                if not messages_data:
+                    break
 
-            current_page_token = messages_data.get("nextPageToken")
-            pages_processed += 1
+                messages = messages_data.get("messages", [])
+                if not messages:
+                    current_page_token = None
+                    break
+
+                total_messages_seen += len(messages)
+                message_ids = [m.get("id") for m in messages if m.get("id")]
+                metadata_messages = cls.fetch_metadata_batch(
+                    access_token=access_token,
+                    message_ids=message_ids,
+                )
+
+                batch_result = cls.process_metadata_batch(
+                    connection=connection,
+                    access_token=access_token,
+                    metadata_messages=metadata_messages,
+                )
+                total_created += batch_result["created_count"]
+                total_existing += batch_result["existing_count"]
+
+                current_page_token = messages_data.get("nextPageToken")
+                pages_processed += 1
+
+                # Persist checkpoint immediately after each page
+                connection.historical_next_page_token = current_page_token
+                connection.save(update_fields=["historical_next_page_token"])
+
+                if not current_page_token:
+                    break
+
             if not current_page_token:
-                break
+                connection.historical_sync_completed = True
+                connection.last_sync_at = timezone.now()
+                cls.initialize_history_checkpoint(connection)
+                connection.save(update_fields=["historical_sync_completed", "last_sync_at"])
 
-        connection.historical_next_page_token = current_page_token
-        update_fields = ["historical_next_page_token"]
-
-        if not current_page_token:
-            connection.historical_sync_completed = True
-            connection.last_sync_at = timezone.now()
-            cls.initialize_history_checkpoint(connection)
-            update_fields.extend(["historical_sync_completed", "last_sync_at"])
-
-        connection.save(update_fields=update_fields)
-
-        return {
-            "search_query": search_query,
-            "candidate_count": total_messages_seen,
-            "created_count": total_created,
-            "existing_count": total_existing,
-            "has_more": bool(current_page_token),
-            "message": (
-                "Historical sync in progress..."
-                if current_page_token
-                else "Historical Gmail sync is complete."
-            ),
-        }
+            return {
+                "search_query": search_query,
+                "candidate_count": total_messages_seen,
+                "created_count": total_created,
+                "existing_count": total_existing,
+                "has_more": bool(current_page_token),
+                "message": (
+                    "Historical sync in progress..."
+                    if current_page_token
+                    else "Historical Gmail sync is complete."
+                ),
+            }
+        finally:
+            cache.delete(lock_key)
 
     @classmethod
     def get_added_message_ids(cls, history_data):
@@ -316,86 +371,103 @@ class GmailSyncService:
 
     @classmethod
     def sync_incremental_job_emails(cls, connection):
-        if not connection.last_history_id:
-            cls.initialize_history_checkpoint(connection)
-
-        access_token = GmailService.get_valid_access_token(connection)
-
-        total_message_ids = []
-        total_created = 0
-        total_existing = 0
-        total_ignored = 0
-        pages_processed = 0
-        current_page_token = connection.incremental_next_page_token
-        latest_history_id = None
+        lock_key = f"gmail_sync_lock_{connection.id}"
+        if not cache.add(lock_key, "locked", timeout=120):
+            return {
+                "new_message_count": 0,
+                "created_count": 0,
+                "existing_count": 0,
+                "ignored_count": 0,
+                "has_more": False,
+                "message": "A sync is already active for this connection.",
+            }
 
         try:
-            while pages_processed < 4:
-                history_data = GmailOAuthService.list_history(
-                    access_token=access_token,
-                    start_history_id=connection.last_history_id,
-                    max_results=cls.PAGE_SIZE,
-                    page_token=current_page_token,
-                )
-                latest_history_id = history_data.get("historyId") or latest_history_id
-                page_msg_ids = cls.get_added_message_ids(history_data)
-
-                if page_msg_ids:
-                    total_message_ids.extend(page_msg_ids)
-                    metadata_messages = cls.fetch_metadata_batch(
-                        access_token=access_token,
-                        message_ids=page_msg_ids,
-                    )
-                    batch_result = cls.process_metadata_batch(
-                        connection=connection,
-                        access_token=access_token,
-                        metadata_messages=metadata_messages,
-                    )
-                    total_created += batch_result["created_count"]
-                    total_existing += batch_result["existing_count"]
-                    total_ignored += batch_result["ignored_count"]
-
-                current_page_token = history_data.get("nextPageToken")
-                pages_processed += 1
-                if not current_page_token:
-                    break
-
-        except requests.HTTPError as err:
-            # If historyId has expired (>7 days) or returned 400/404, recover automatically
-            if err.response is not None and err.response.status_code in (400, 404):
-                print("HISTORY ID EXPIRED, RE-INITIALIZING CHECKPOINT...")
+            if not connection.last_history_id:
                 cls.initialize_history_checkpoint(connection)
-                return cls.sync_recent_query_fallback(connection, access_token)
-            raise
 
-        # Recover any previously unprocessed candidates, prioritizing newest first
-        unprocessed = list(GmailJobEmail.objects.filter(
-            gmail_connection=connection,
-            job_application_id__isnull=True,
-        ).order_by("-id")[:10])
-        if unprocessed:
-            for cand in unprocessed:
-                GmailJobApplicationImporter.import_candidate(cand)
+            access_token = GmailService.get_valid_access_token(connection)
 
-        connection.incremental_next_page_token = current_page_token
-        if latest_history_id:
-            connection.last_history_id = latest_history_id
-        connection.last_sync_at = timezone.now()
-        connection.save(update_fields=["incremental_next_page_token", "last_history_id", "last_sync_at"])
+            total_message_ids = []
+            total_created = 0
+            total_existing = 0
+            total_ignored = 0
+            pages_processed = 0
+            current_page_token = connection.incremental_next_page_token
+            latest_history_id = None
 
-        return {
-            "new_message_count": len(total_message_ids),
-            "created_count": total_created,
-            "existing_count": total_existing,
-            "ignored_count": total_ignored,
-            "has_more": bool(current_page_token),
-            "message": "New Gmail changes were synced successfully.",
-        }
+            try:
+                while pages_processed < 4:
+                    history_data = GmailOAuthService.list_history(
+                        access_token=access_token,
+                        start_history_id=connection.last_history_id,
+                        max_results=cls.PAGE_SIZE,
+                        page_token=current_page_token,
+                    )
+                    latest_history_id = history_data.get("historyId") or latest_history_id
+                    page_msg_ids = cls.get_added_message_ids(history_data)
+
+                    if page_msg_ids:
+                        total_message_ids.extend(page_msg_ids)
+                        metadata_messages = cls.fetch_metadata_batch(
+                            access_token=access_token,
+                            message_ids=page_msg_ids,
+                        )
+                        batch_result = cls.process_metadata_batch(
+                            connection=connection,
+                            access_token=access_token,
+                            metadata_messages=metadata_messages,
+                        )
+                        total_created += batch_result["created_count"]
+                        total_existing += batch_result["existing_count"]
+                        total_ignored += batch_result["ignored_count"]
+
+                    current_page_token = history_data.get("nextPageToken")
+                    pages_processed += 1
+                    if not current_page_token:
+                        break
+
+            except requests.HTTPError as err:
+                # If historyId has expired (>7 days) or returned 400/404, recover automatically
+                if err.response is not None and err.response.status_code in (400, 404):
+                    print("HISTORY ID EXPIRED, RE-INITIALIZING CHECKPOINT...")
+                    cls.initialize_history_checkpoint(connection)
+                    return cls.sync_recent_query_fallback(connection, access_token)
+                raise
+
+            # Recover any previously unprocessed candidates, prioritizing newest first
+            unprocessed = list(GmailJobEmail.objects.filter(
+                gmail_connection=connection,
+                job_application_id__isnull=True,
+                is_processed=False,
+            ).order_by("-id")[:10])
+            if unprocessed:
+                GmailJobApplicationImporter.import_candidates_batch(unprocessed)
+
+            connection.incremental_next_page_token = current_page_token
+            if latest_history_id:
+                connection.last_history_id = latest_history_id
+            connection.last_sync_at = timezone.now()
+            connection.save(update_fields=["incremental_next_page_token", "last_history_id", "last_sync_at"])
+
+            return {
+                "new_message_count": len(total_message_ids),
+                "created_count": total_created,
+                "existing_count": total_existing,
+                "ignored_count": total_ignored,
+                "has_more": bool(current_page_token),
+                "message": "New Gmail changes were synced successfully.",
+            }
+        finally:
+            cache.delete(lock_key)
 
     @classmethod
     def sync_recent_query_fallback(cls, connection, access_token):
-        """Fallback when History ID has expired: runs search query for recent messages."""
+        """Fallback when History ID has expired: runs search query for recent messages with continuity buffer."""
         search_query = cls.build_job_search_query()
+        if connection.last_sync_at:
+            since_date = (connection.last_sync_at - timedelta(days=1)).strftime("%Y/%m/%d")
+            search_query = f"{search_query} after:{since_date}"
         messages_data = GmailOAuthService.list_messages(
             access_token=access_token,
             query=search_query,

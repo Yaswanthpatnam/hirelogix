@@ -1,0 +1,63 @@
+# =========================
+# Environment variables & Secrets
+# =========================
+.env
+.env.*
+*.env
+!.env.example
+
+# =========================
+# Python & Virtual Environments
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =========================
+# Django
+# =========================
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+*.log
+
+# =========================
+# Node & Frontend Build
+# =========================
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+*.local
+
+# =========================
+# Operating System & IDE
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =========================
+# Temporary & Scratch Files
+# =========================
+scratch/
+tmp/
+temp/
