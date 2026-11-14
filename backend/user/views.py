@@ -300,54 +300,8 @@ class LogoutAPI(APIView):
 
                 print("TOKEN BLACKLIST ERROR:", exc)
 
-        # Clear the user's Gmail authorization
-        # when they explicitly log out so they can log in fresh.
-        if target_user:
-
-            try:
-
-                connection = (
-                    GmailConnection.objects
-                    .filter(
-                        user=target_user
-                    )
-                    .first()
-                )
-
-                if connection:
-
-                    connection.access_token = ""
-                    connection.refresh_token = None
-                    connection.token_expires_at = None
-                    connection.is_active = False
-                    connection.historical_sync_completed = False
-                    connection.last_history_id = None
-                    connection.historical_next_page_token = None
-                    connection.incremental_next_page_token = None
-                    connection.pending_history_id = None
-
-                    connection.save(
-                        update_fields=[
-                            "access_token",
-                            "refresh_token",
-                            "token_expires_at",
-                            "is_active",
-                            "historical_sync_completed",
-                            "last_history_id",
-                            "historical_next_page_token",
-                            "incremental_next_page_token",
-                            "pending_history_id",
-                            "updated_at",
-                        ]
-                    )
-
-            except Exception as exc:
-
-                print(
-                    "GMAIL LOGOUT CLEANUP ERROR:",
-                    repr(exc)
-                )
-
+        # Explicit logout revokes the user's JWT refresh session.
+        # It does NOT disconnect their Gmail account.
         return Response({
             "message":
                 "Logged out successfully."

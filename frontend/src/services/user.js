@@ -12,44 +12,36 @@ export async function getCurrentUser() {
 }
 
 
-export async function logoutUser() {
-  const refreshToken =
-    localStorage.getItem("refresh");
-
-  const accessToken =
-    localStorage.getItem("access");
-
+export function logoutUser() {
+  const refreshToken = localStorage.getItem("refresh");
+  const accessToken = localStorage.getItem("access");
   const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL ||
-    "http://localhost:8000";
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
+  // 1. Immediately disable Google auto-select
   try {
-    if (refreshToken || accessToken) {
-      await axios.post(
-        `${apiBaseUrl}/user/auth/logout/`,
-        {
-          refresh: refreshToken || "",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(accessToken
-              ? { Authorization: `Bearer ${accessToken}` }
-              : {}),
-          },
-          timeout: 5000,
-        }
-      );
-    }
-  } catch (err) {
-    console.error("Logout request failed:", err);
-  } finally {
-    try {
-      window.google?.accounts?.id?.disableAutoSelect?.();
-    } catch (_) {}
+    window.google?.accounts?.id?.disableAutoSelect?.();
+  } catch (_) {}
 
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.assign("/");
+  // 2. Fire-and-forget token revocation in background using keepalive
+  if (refreshToken || accessToken) {
+    try {
+      fetch(`${apiBaseUrl}/user/auth/logout/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          refresh: refreshToken || "",
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (_) {}
   }
+
+  // 3. Immediately clear local storage and redirect without blocking UI
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.assign("/");
 }

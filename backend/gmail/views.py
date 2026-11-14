@@ -477,6 +477,10 @@ class GmailIncrementalSyncAPI(APIView):
             )
 
         try:
+            if not connection.historical_sync_completed:
+                sync_result = GmailSyncService.sync_historical_job_emails(connection)
+                return Response(sync_result, status=status.HTTP_200_OK)
+
             if not connection.last_history_id:
                 GmailSyncService.initialize_history_checkpoint(connection)
 

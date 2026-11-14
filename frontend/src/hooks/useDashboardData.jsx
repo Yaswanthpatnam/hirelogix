@@ -136,7 +136,7 @@ export default function useDashboardData() {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       pollTimerRef.current = setInterval(() => {
         fetchLatestData();
-      }, 2500);
+      }, 4500);
 
       if (!status.historical_sync_completed) {
         await syncHistoricalGmail().catch(() => {});
