@@ -1,4 +1,4 @@
-# HireLogix 🚀
+# HireLogix.ai 🚀
 
 > **Autonomous Career Intelligence Platform:** Hybrid LPU/Local AI Semantic Engine, Deterministic Privacy Gatekeeper, and Resilient Gmail Delta Synchronization.
 
