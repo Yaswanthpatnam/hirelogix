@@ -442,7 +442,9 @@ class GmailSyncService:
                 is_processed=False,
             ).order_by("-id")[:10])
             if unprocessed:
-                GmailJobApplicationImporter.import_candidates_batch(unprocessed)
+                batch_res = GmailJobApplicationImporter.import_candidates_batch(unprocessed)
+                total_created += batch_res.get("created_count", 0)
+                total_existing += batch_res.get("updated_count", 0)
 
             connection.incremental_next_page_token = current_page_token
             if latest_history_id:

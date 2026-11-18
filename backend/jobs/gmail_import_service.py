@@ -14,6 +14,22 @@ class GmailJobApplicationImporter:
     (true company name, role, semantic status, interview dates/links) from confirmed job emails.
     """
 
+    @classmethod
+    def sanitize_snippet(cls, raw_text: str, fallback_subject: str = "") -> str:
+        if not raw_text:
+            return fallback_subject or ""
+        cleaned = re.sub(r"<!--\[if.*?<!\[endif\]-->", " ", raw_text, flags=re.DOTALL | re.IGNORECASE)
+        cleaned = re.sub(r"<!\[[^\]]+\]>", " ", cleaned)
+        cleaned = re.sub(r"<!--.*?-->", " ", cleaned, flags=re.DOTALL)
+        cleaned = re.sub(r"<[^>]+>", " ", cleaned)
+        cleaned = re.sub(r'(?:style|class)=(?:"[^"]*"?|\'[^\']*\'?)', ' ', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\b(?:margin|padding|max-width|background-color|font-size|direction|display|text-align):[^;\n>]+;?', ' ', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'[\s><;="]+', ' ', cleaned).strip()
+        # If after stripping the text has fewer than 10 alphabetic characters (e.g. just numbers or noise), fallback
+        if len(re.sub(r'[^a-zA-Z]', '', cleaned)) < 10 and fallback_subject:
+            return fallback_subject
+        return cleaned[:350]
+
     # --- KNOWN ATS & RECRUITING DOMAIN PLATFORMS ---
     GENERIC_ATS_DOMAINS = {
         "greenhouse.io", "greenhouse-mail.io", "gh-mail.io",
@@ -226,7 +242,7 @@ class GmailJobApplicationImporter:
         ai_data = JobAIAnalyzer.analyze_candidate(
             sender=effective_sender,
             subject=subject,
-            snippet=(body or snippet)[:350],
+            snippet=cls.sanitize_snippet(body or snippet, subject),
             email_date=candidate.email_date,
         )
 
@@ -412,7 +428,7 @@ class GmailJobApplicationImporter:
                 "id": cand.id,
                 "sender": effective_sender,
                 "subject": cand.subject or "",
-                "snippet": (cand.body_text or cand.snippet or "")[:350],
+                "snippet": cls.sanitize_snippet(cand.body_text or cand.snippet or "", cand.subject or ""),
                 "email_date": cand.email_date or "",
             })
 

@@ -51,10 +51,11 @@ class GroqJobAnalyzer:
             "Classify job emails. Output EXACTLY 1 line per ID in this format:",
             "ID|IS_JOB(Y/N)|COMPANY|ROLE|STATUS(applied/under_review/assessment/interview/offer/rejected)",
             "Rules:",
-            "- Y for real direct job applications, interview invites, coding tests, offers, rejections.",
-            "- N for newsletters, job digests, aggregators, promotional blasts, or recruiter marketing.",
+            "- Y for real direct job applications, platform application confirmations (Wellfound, LinkedIn, Ashby, Greenhouse, Lever, Workday, iCIMS), interview invites, coding tests, offers, rejections.",
+            "- N ONLY for multi-job newsletters, marketing blasts, general job recommendation digests ('10 new jobs for you', 'weekly alerts'), college admissions, course promos, credit cards, or bank notifications.",
+            "- IMPORTANT: If an email from Wellfound, LinkedIn, Workday, etc. confirms an application submission (e.g. 'Application to [Company] submitted', 'Your application to [Company]'), classify as Y and extract the target employer as COMPANY.",
             "- If N, leave company/role empty: e.g. 5|N|||",
-            "- COMPANY: Extract the actual employer (e.g. Oracle, UiPath, DNV). NEVER use recruitment platforms like Ashby, Greenhouse, Lever, Workday, Wellfound.",
+            "- COMPANY: Extract the actual hiring company/employer (e.g. Oracle, VisChess, UiPath, Thermo Fisher, Booking.com, Zoho). NEVER use recruitment platforms like Ashby, Greenhouse, Lever, Workday, Wellfound, LinkedIn, iCIMS as the company name.",
             "- ROLE: Concise job title (e.g. Software Engineer, SDE 1, Data Analyst) or empty. NEVER full sentences or email subjects.",
             "- STATUS: Must be one of: applied, under_review, assessment, interview, offer, rejected.",
             "  * IMPORTANT: Carefully read the email snippet text! If it mentions choosing another candidate, moving forward with other candidates, not progressing, skills not aligning, or regret to inform, STATUS MUST BE 'rejected' (even if subject says 'Thank you for your application' or 'Update').",
@@ -147,8 +148,8 @@ class GroqJobAnalyzer:
         sys_prompt = (
             "Classify job email. Return JSON: "
             '{"is_job_application": bool, "is_promotional_digest": bool, "company_name": str, "role_title": str, "status": "applied"|"under_review"|"assessment"|"interview"|"offer"|"rejected"}. '
-            "True for direct applications, employee referrals, coding tests, interviews, offers, rejections. False for job alert digests/newsletters. "
-            "Extract actual hiring employer, not ATS platform (Greenhouse, Lever, Workday)."
+            "True for direct applications, platform application confirmations (Wellfound, LinkedIn, Ashby, Greenhouse, Lever, Workday), coding tests, interviews, offers, rejections. False for job alert digests/newsletters. "
+            "Extract actual hiring employer (e.g. VisChess, Thermo Fisher, Zoho), not ATS platform (Greenhouse, Lever, Workday, Wellfound, LinkedIn)."
         )
 
         user_content = f"From: {clean_sender}\nSubj: {clean_subject}\nSnippet: {clean_snippet}"

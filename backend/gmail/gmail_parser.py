@@ -64,26 +64,52 @@ class GmailMessageParser:
             return ""
 
     @classmethod
+    def clean_snippet(cls, raw_snippet: str) -> str:
+        if not raw_snippet:
+            return ""
+        # Strip Outlook/IE conditional comments and standard HTML comments
+        cleaned = re.sub(r"<!--\[if.*?<!\[endif\]-->", " ", raw_snippet, flags=re.DOTALL | re.IGNORECASE)
+        cleaned = re.sub(r"<!\[[^\]]+\]>", " ", cleaned)
+        cleaned = re.sub(r"<!--.*?-->", " ", cleaned, flags=re.DOTALL)
+        # Strip tags and unescape
+        cleaned = re.sub(r"<[^>]+>", " ", cleaned)
+        cleaned = html.unescape(cleaned)
+        # Strip lingering attributes (e.g. style="...", class="...") and CSS declarations
+        cleaned = re.sub(r'(?:style|class)=(?:"[^"]*"?|\'[^\']*\'?)', ' ', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\b(?:margin|padding|max-width|background-color|font-size|direction|display|text-align):[^;\n>]+;?', ' ', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'[\s><;="]+', ' ', cleaned)
+        return cleaned.strip()
+
+    @classmethod
     def strip_html_tags(cls, html_content):
         if not html_content:
             return ""
 
-        # Remove scripts and styles
+        # 1. Remove Outlook/IE conditional comments and standard HTML comments
+        cleaned = re.sub(r"<!--\[if.*?<!\[endif\]-->", " ", html_content, flags=re.DOTALL | re.IGNORECASE)
+        cleaned = re.sub(r"<!\[[^\]]+\]>", " ", cleaned)
+        cleaned = re.sub(r"<!--.*?-->", " ", cleaned, flags=re.DOTALL)
+
+        # 2. Remove scripts and styles
         cleaned = re.sub(
             r"<(script|style).*?>.*?</\1>",
             "",
-            html_content,
+            cleaned,
             flags=re.DOTALL | re.IGNORECASE,
         )
-        # Convert break lines and paragraphs to newlines
+        # 3. Convert break lines and paragraphs to newlines
         cleaned = re.sub(r"<(br|p|div|tr)[\s/>]", "\n", cleaned, flags=re.IGNORECASE)
-        # Strip all other HTML tags
+        # 4. Strip all other HTML tags
         cleaned = re.sub(r"<[^>]+>", " ", cleaned)
-        # Unescape HTML entities (&amp;, &nbsp;, etc.)
+        # 5. Unescape HTML entities (&amp;, &nbsp;, etc.)
         cleaned = html.unescape(cleaned)
-        # Normalize whitespace
+        # 6. Strip lingering attributes (e.g. style="...", class="...") and CSS declarations
+        cleaned = re.sub(r'(?:style|class)=(?:"[^"]*"|\'[^\']*\')', ' ', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\b(?:margin|padding|max-width|background-color|font-size|direction|display|text-align):[^;\n>]+;?', ' ', cleaned, flags=re.IGNORECASE)
+        # 7. Normalize whitespace
         cleaned = re.sub(r"[ \t]+", " ", cleaned)
         cleaned = re.sub(r"\n\s*\n+", "\n\n", cleaned)
+        cleaned = re.sub(r"^[>\s;]+", "", cleaned)
         return cleaned.strip()
 
     @classmethod
@@ -128,7 +154,7 @@ class GmailMessageParser:
 
         snippet = message.get("snippet", "")
         if snippet:
-            return html.unescape(snippet).strip()
+            return cls.clean_snippet(snippet)
 
         return ""
 
@@ -137,4 +163,4 @@ class GmailMessageParser:
         raw_snippet = message.get("snippet", "")
         if not raw_snippet:
             return ""
-        return html.unescape(raw_snippet).strip()
+        return cls.clean_snippet(raw_snippet)
